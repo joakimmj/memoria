@@ -1,6 +1,7 @@
 package todo
 
 import (
+	"log"
 	"strconv"
 	"time"
 
@@ -66,9 +67,10 @@ func (view *viewState) toggleCompleted() {
 	}
 
 	indexField := selectedRow[0]
+	// index, err := strconv.ParseUint(indexField, 10, 32)
 	index, err := strconv.Atoi(indexField)
 	if err == nil {
-		view.todos.toggle(index)
+		view.todos.toggle(uint(index))
 		view.updateTable(view.getRowIndex(indexField))
 	}
 }
@@ -83,10 +85,11 @@ func (view *viewState) deleteTask() {
 	indexField := selectedRow[0]
 	index, err := strconv.Atoi(indexField)
 	if err == nil {
-		view.todos.delete(index)
+		view.todos.delete(uint(index))
 		rowIndex := view.getRowIndex(indexField)
-		if rowIndex > len(view.todos) {
-			rowIndex = len(view.todos) - 1
+		todos, err := view.todos.getAll()
+		if err != nil && rowIndex > len(todos) {
+			rowIndex = len(todos) - 1
 		}
 		if rowIndex <= 0 {
 			rowIndex = 0
@@ -124,7 +127,7 @@ func (view *viewState) updateInput(msg tea.Msg) (TodoView, tea.Cmd) {
 					indexField := selectedRow[0]
 					index, err := strconv.Atoi(indexField)
 					if err == nil {
-						view.todos.edit(index, view.textInput.Value())
+						view.todos.edit(uint(index), view.textInput.Value())
 					}
 				}
 			case del:
@@ -212,14 +215,10 @@ func (view *viewState) View() string {
 }
 
 func NewTodoView() TodoView {
-	todos := todos{}
-	todos.add("Buy milk")
-	todos.add("Buy bread and some other stuff\nCoffee")
-	todos.add("Buy bread")
-	todos.add("Buy bread")
-	todos.add("Buy bread")
-	todos.add("Buy bread")
-	todos.toggle(3)
+	todos, err := openDB()
+	if err != nil {
+		log.Fatal("Failed to open task database")
+	}
 
 	ti := textinput.New()
 	ti.Placeholder = "task..."
@@ -228,8 +227,8 @@ func NewTodoView() TodoView {
 	ti.Width = 60
 
 	return &viewState{
-		todos:         todos,
-		todoTable:     newTable(&todos, true),
+		todos:         *todos,
+		todoTable:     newTable(todos, true),
 		width:         0,
 		height:        20,
 		hideCompleted: true,
@@ -249,28 +248,30 @@ func newTable(todos *todos, hideCompleted bool) table.Model {
 
 	rows := []table.Row{}
 
-	t := *todos
-	for idx, val := range t {
-		if hideCompleted && val.completed {
-			continue
-		}
+	t, err := todos.getAll()
+	if err == nil {
+		for _, val := range t {
+			if hideCompleted && val.completed {
+				continue
+			}
 
-		completed := "❌"
-		if val.completed {
-			completed = "✅"
-		}
-		completedAt := "-"
-		if val.completedAt != nil {
-			completedAt = val.completedAt.Format(time.DateOnly)
-		}
+			completed := "❌"
+			if val.completed {
+				completed = "✅"
+			}
+			completedAt := "-"
+			if val.completedAt != nil {
+				completedAt = val.completedAt.Format(time.DateOnly)
+			}
 
-		rows = append(rows, table.Row{
-			strconv.Itoa(idx),
-			completed,
-			val.title,
-			val.createdAt.Format(time.DateOnly),
-			completedAt,
-		})
+			rows = append(rows, table.Row{
+				strconv.FormatUint(uint64(val.id), 10),
+				completed,
+				val.task,
+				val.createdAt.Format(time.DateOnly),
+				completedAt,
+			})
+		}
 	}
 
 	todoTable := table.New(
