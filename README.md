@@ -1,51 +1,12 @@
 # Memoria
 
-TUI (or CLI tool.. not decided yet) for notes and todos.
+Memoria is a note-taking system built around a simple idea: \
+*write down what you want to remember and keep it like a memory, in a brain*
 
-Programming language: Rust or Go
+- A **brain** is a folder of notes — one for work, one personal, one per project.
+- An **engram** is a single note — a meeting record, a recipe, a project plan.
+- A **synapse** is a link from one note to another.
+- A **concept** is anything you reference that isn't itself a note — a person, a topic, a tag.
 
-## Features
-
-API
-- add/edit/remove/complete todos
-- add/edit/remove notes
-- folder structure of notes as table of content
-- view notes and todos (syntax highlighting? use som other tool for this?)
-- edit notes with $EDITOR
-
-UI
-```
-+------------------------------------------------------------------------------
-|
-|  <list of todos>                                                      |
-|                                                                   scrollable
-|  <list of completed todos> (default: hidden)                          |
-|
-+------------------------------------------------------------------------------
-|  <keymap help>
-+------------------------------------------------------------------------------
-|  <keymap notes>
-+------------------------------------------------------------------------------
-|
-|                                                                       |
-|  <TOC notes>                                                      scrollable
-|                                                                       |
-|
-+------------------------------------------------------------------------------
-```
-
-## Configuration
-> `.config/memoria/mia.conf`
-
-- directory for notes/todos (default: `~/.memoria/`)
-- default edirot (default extracted from OS???)
-- 
-
-## Usage
-
-```
-$ mia -h
-
-Memoria will default start TUI
-
-```
+A brain holds engrams, connected to each other through synapses and to
+concepts through their frontmatter.
