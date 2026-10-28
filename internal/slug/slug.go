@@ -8,7 +8,9 @@ import (
 
 // latin transliterates the lowercase Latin letters slugs know to ASCII.
 // Text is lowercased first, so uppercase letters need no entries. A letter
-// not in it is dropped, so a slug is the same on every system.
+// not in it is not transliterated: it separates words like any other
+// character outside [a-z0-9] ("a東b" → "a_b"), so a slug is the same on
+// every system.
 var latin = expand(map[string]string{
 	"àáâãäåāăą":  "a",
 	"æ":          "ae",

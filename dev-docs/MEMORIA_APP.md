@@ -61,6 +61,12 @@ it. Everything else is a client of that binary.
 - **The core never asks.** Every operation answers a result, or an error with
   a code; whoever called it decides whether a person is asked. Prompts,
   pickers and confirmations belong to clients.
+- **The core answers data; clients present it.** Results come in one fixed,
+  documented order; grouping, sorting and layout are a client's.
+- **Works in Obsidian too, where it can.** A brain opened as an Obsidian vault
+  should keep working: links followed, `#slug` read as tags, frontmatter as
+  properties, task fields as Dataview fields. Preferred for every new syntax,
+  not required.
 
 ### 1.3 Verbs
 
@@ -75,10 +81,10 @@ with its inverse:
 | **Edit** | change what an existing thing carries | a concept's `meta`, an engram's value field | — |
 | **Alias** | give a concept another name it answers to | concept | — |
 | **Rename** | give an engram a new filename, keeping what refers to it | engram | itself |
-| **Toggle** | flip a task between its two states | task | itself |
+| **Toggle** | cycle a list item through none and the task markers | task | itself |
 
-Rebuild (regenerate a derived file: the atlas, the index) and Search keep one
-meaning each. Reads are named for what they answer (`engrams`, `agenda`). A
+Rebuild (regenerate a derived file: the atlas, the index), Search and Resolve
+(what a piece of text refers to) keep one meaning each. Reads are named for what they answer (`engrams`, `agenda`). A
 new operation picks its verb from this table; one that fits none adds a row
 here first.
 
@@ -104,7 +110,7 @@ memoria (Go)                     clients
 - **Editor plugins are thin.** They run `mia lsp` and `mia <command>`, and keep
   only what a client owns: pickers, views, navigation history (§20).
 - **The CLI is stateless; clients hold state.** Each `mia <command>` run
-  starts from its arguments, the working directory and the files, and keeps
+  starts from its arguments and the files, and keeps
   nothing after it exits — no current brain, no history. What only makes
   sense while something is running — the brain being browsed, navigation
   history, which done tasks are shown — lives in the viewer or an editor
@@ -150,26 +156,30 @@ that travels between machines:
 ```
 
 Registering a path that does not exist creates the folder. The name defaults
-to the folder's basename; a name already registered is an error.
+to the folder's basename; a name or a folder already registered is an error,
+code `collision`.
 Deregistering removes the entry only and never touches the folder.
 
 ### 3.2 Resolving the brain
 
-An operation that needs a brain and was not told which resolves it in this
-order:
+The brain comes only from what the command line says, so a command gives the
+same answer from any directory:
 
 ```
-1. the brain named by the caller (--brain)
-2. the registered brain whose folder holds the file the operation is about
-3. the registered brain whose folder holds the working directory
-4. otherwise an error, code "brain", listing the registered brains
+1. --brain <name>
+2. the brain of an engram argument (§17.1)
+3. otherwise, by command:
+   - reads across brains (search, engrams, tasks, concepts,
+     undeclared-concepts, last, check) → every registered brain
+   - everything else that needs a brain → error, code "brain",
+     listing the registered brains
 ```
 
-Only what the caller can see decides: the arguments and where the command
-runs, the way `git` finds its repository. There is no current brain in the
-core, since the CLI keeps no state between runs (§2). A brain that is named but
-not registered is an error, never a fallback. A client that holds a brain for
-the length of a session (§18, §20) passes it as step 1.
+On the reads across brains, `--brain` may be repeated to name a subset, and
+every result carries its `brain`. A brain that is named but not registered is
+`not_found`, never a fallback. There is no current brain in the core, since
+the CLI keeps no state between runs (§2); a client that holds a brain for the
+length of a session (§18, §20) passes it as `--brain`.
 
 ### 3.3 Contents
 
@@ -226,11 +236,11 @@ Grouped by what each part shapes:
     "date_format": "YYYY-MM-DD",
     "concept_form": "slug",
     "filename": { "prefix": "date", "date_format": "YYYY-MM-DD" },
-    "content_template": "# %title%\n\n%cursor%",
+    "content_template": "# %title%\n\n%body%",
     "task_markers": { "not_done": ["[ ]"], "done": ["[x]", "[X]"] },
     "index": {
       "filename": "index.md",
-      "sections": ["stats", "recent", "concepts", "roots", "not_done_tasks", "tasks"],
+      "sections": ["stats", "recent", "concepts", "roots", "overdue", "not_done_tasks", "tasks"],
       "stats": ["total_engrams", "total_concepts", "not_done_tasks"]
     }
   },
@@ -290,9 +300,11 @@ defaults or the user's config, and hide what is actually special about it.
 { "engrams": { "filename": { "prefix": "none" } } }
 ```
 
-`mia config [--brain B]` answers the merged result, for clients and for a
-person checking what applies; `mia config --defaults` answers the built-in
-defaults alone, to copy the keys worth changing from. Nothing writes a config
+`mia config [--brain B]` answers the merged result — without `--brain`, the
+defaults and the user's config; with it, the brain's tier too — for clients
+and for a person checking what applies. `mia config --defaults` answers the
+built-in defaults alone, to copy the keys worth changing from; with `--brain`
+as well it is `usage`. Nothing writes a config
 file on install or first run: a missing `config.json` means the defaults.
 
 ### 4.4 Platforms and locations
@@ -438,7 +450,23 @@ run is a marker only when whitespace or the end of the line follows it, so
 inverse of reading.
 
 A list item is a **task** when its marker is one of `engrams.task_markers`;
-its state is the key the marker is listed under, `not_done` or `done`.
+its state is the key the marker is listed under, `not_done` or `done`. A list
+item with no marker has the state `none`.
+
+A task's text may carry two things memoria reads, both plain inline text:
+
+```markdown
+- [ ] Send budget draft #alice_smith [due:: 2026-10-25]
+```
+
+- **Concepts** — `#slug` mentions (§6.5), any type: who or what the task is
+  about.
+- **A due date** — `[due:: <date>]`, a Dataview inline field. The date is
+  written in `engrams.date_format` and read in it, with ISO `YYYY-MM-DD` as the
+  fallback; one that reads as neither is reported (§11.4). With the default
+  format, Dataview reads it as a date too; with another, as text.
+
+Toggling (§14.2) changes only the marker, so both survive.
 
 ### 6.3 Links and headings
 
@@ -591,8 +619,8 @@ placed above an unreadable opening `---` would break it for every reader.
 
 ```
 attach-synapse(source, field, target)   → { brain, source, field, target }
-  1. the brain holds source; field is a configured synapse field;
-     source ≠ target; both files exist
+  1. source and target are one brain's (§17.1); field is a configured
+     synapse field; source ≠ target; both files exist
   2. add target to source's field, unless there
   3. field.inverse names a configured synapse field →
        add source to target's inverse field, unless there
@@ -611,7 +639,8 @@ one-sided synapse writes only the missing inverse — which is also how
 
 ```
 detach-synapse(source, field, target)   → { brain, source, field, target }
-  1. field is configured, and holds target — otherwise an error
+  1. field is configured, and holds target — otherwise not_found. A target
+     whose file is gone is matched by the filename the field holds
   2. remove target from source's field
   3. field.inverse is configured and the target file exists →
        remove source from target's inverse field
@@ -627,13 +656,15 @@ without a hand edit.
 ## 9. Value fields
 
 ```
-edit-frontmatter(source, field, value)   → { brain, source, field, value }
+edit-frontmatter(engram, field, value, remove?)   → { brain, engram, field, value }
   1. field is a configured frontmatter field of kind "value"
      (a concept field is attach-concept's, which resolves and type-checks)
-  2. value ""  → cleared: [] for a list, a bare key otherwise
+  2. remove   → that value taken out of the field; not there → not_found
+     value "" → cleared: [] for a list, a bare key otherwise
      list=false → replaced
      list=true  → appended, unless there
   3. write the field (§6.1); refresh the atlas
+  answers the field's value after the edit
 ```
 
 A field's `default` plays no part here: it is what creation writes, not what
@@ -719,34 +750,43 @@ on `cpp` must win over a concept keyed `c`.
 
 ```
 create-concept(display_name, type, meta?, slug?)   → concept
-  key = slug or slugify(display_name); empty → error
-  a key already registered, or a display name that already resolves → error
-  type must be one the brain has
+  key = slug or slugify(display_name); empty → empty_slug
+  a key already registered, or a display name that already resolves → collision
+  type must be one the brain has → else type
 
-edit-concept(mention, type?, meta?)                → concept
-  the mention must resolve to a registered concept
+edit-concept(mention, type?, meta?, display_name?, note?)   → concept
+  the mention must resolve to a registered concept → else not_found
+  type must be one the brain has → else type
+  display_name must not resolve to another concept → else collision; the
+    old name keeps resolving by slug, and rebuild --fix rewrites fields
+    holding it
   meta "k=" removes k
 
-alias-concept(mention, alias)                      → concept
-  an alias that already resolves to another concept → error
+alias-concept(mention, alias, remove?)             → concept
+  the mention must resolve → else not_found
+  an alias that already resolves to another concept → collision;
+    to the same one → nothing written
+  remove → the alias taken off; not one of its aliases → not_found
 
-attach-concept(source, field, concept)             → { brain, source, field, text }
+attach-concept(engram, field, concept)             → { brain, engram, field, text }
   1. field is a configured concept field
-  2. resolved → its type must be the field's concept_type, if it has one;
+  2. resolved → its type must be the field's concept_type, if it has one
+                (else type);
                 text = its key or display_name, per the field's concept_form
      undeclared → text = the mention as given
   3. already in the field (anything resolving to the same concept) → nothing
      written; list = false → replaces
   4. write the field (§6.1); refresh the atlas
 
-detach-concept(source, field, concept)             → { brain, source, field, removed }
+detach-concept(engram, field, concept)             → { brain, engram, field, removed }
   removes every value in the field that is, or resolves to, the concept;
-  none there → error. Other fields and prose mentions are untouched.
+  none there → not_found. Other fields and prose mentions are untouched.
 
-register-concept(mention, type | alias_of)         → concept
+register-concept(mention, type | alias_of)         → { concept, rewritten }
   an undeclared mention becomes a concept: created with the mention as its
-  display name, or made an alias of an existing one. Then every engram naming
-  it has that field rewritten into its concept_form (the same repair
+  display name, or made an alias of an existing one (unknown → not_found).
+  A mention that already resolves → collision. Then every engram naming it
+  has that field rewritten into its concept_form (the same repair
   rebuild --fix makes, limited to those engrams).
 
 undeclared-concepts                                 → { name, count, engrams }[]
@@ -754,9 +794,10 @@ undeclared-concepts                                 → { name, count, engrams }
   them, then by name
 ```
 
-`create-concept` refuses a duplicate and `edit-concept` refuses an unknown
-concept, so a typo in either is an error rather than a silent merge or a new
-person. `attach-concept` writes an undeclared name as given, the way a
+`create-concept` starts a concept nothing names yet; `register-concept`
+records one engrams already name, and rewrites them. `create-concept` refuses
+a duplicate and `edit-concept` refuses an unknown concept, so a typo in either
+is an error rather than a silent merge or a new person. `attach-concept` writes an undeclared name as given, the way a
 hand-typed tag would be; registering is a separate, optional cleanup.
 
 ---
@@ -787,8 +828,11 @@ time.
   "concepts": { "java": ["2026-08-01_project_x.md", "java_optional_stream.md"] },
   "concepts_by_type": { "person": ["alice_smith"], "tag": ["java"] },
   "tasks": {
-    "not_done": [{ "engram": "2026-08-01_project_x.md", "line": 12, "text": "Call Alice" }],
-    "done": [{ "engram": "2026-07-31_meeting_notes.md", "line": 4, "text": "Send follow-up" }]
+    "not_done": [{ "engram": "2026-08-01_project_x.md", "line": 12,
+                   "text": "Call #alice_smith [due:: 2026-08-05]",
+                   "due": "2026-08-05", "concepts": ["alice_smith"] }],
+    "done": [{ "engram": "2026-07-31_meeting_notes.md", "line": 4,
+               "text": "Send follow-up", "concepts": [] }]
   }
 }
 ```
@@ -806,9 +850,10 @@ time.
   resolves**: prose is full of `#` that names nothing (`#fff`, `#42`).
 - **`concepts_by_type`** lists every registered concept by type, referenced or
   not.
-- **`tasks`** lists every task line outside the `SYNAPSES` block, by state.
-  Tasks carry no metadata — no dates, no priority — so they stay plain
-  checkboxes readable anywhere.
+- **`tasks`** lists every task line outside the `SYNAPSES` block, by state:
+  its text as written, `due` normalised to ISO when it has one, and
+  `concepts`, the resolved keys of its `#slug` mentions (unresolved ones
+  left out, as in prose).
 
 ### 11.2 Refresh on read
 
@@ -847,6 +892,7 @@ Each problem has a `kind`, a `file` and a `line`:
 | `wrong_concept_type` | a concept of another type than its field takes | the field's line |
 | `non_canonical_mention` | a value that resolves but is not in its field's `concept_form` | the field's line |
 | `orphaned_concept` | a registered concept no engram names | its key in `.mia_concepts.json` |
+| `unparseable_due` | a `[due:: …]` that reads as neither `date_format` nor ISO | the task's line |
 
 The four concept kinds are reported **only once the registry holds a
 concept**: a brain that has declared nothing is not told everything it writes
@@ -874,7 +920,7 @@ the report.
 
 ```
 create-engram(brain, title?, fields?, body?, concept?, concept_field?, reuse_if_exists?)
-                                    → { path, cursor?, created }
+                                    → { brain, path, body?, created }
   1. the filename (§5): prefix + slugify(title)
   2. header:
        frontmatter: every frontmatter field, sorted — given values from
@@ -883,7 +929,8 @@ create-engram(brain, title?, fields?, body?, concept?, concept_field?, reuse_if_
        then the SYNAPSES block from config (§7.3); none to show → no block
   3. prose = content_template rendered
   4. content = header + (a blank line, when there is a header) + prose
-  5. cursor = where %cursor% was; body, if given, goes there
+  5. body text, if given, goes where %body% was; the placeholder is removed
+     either way, and its position is answered as body: { line, col }
   6. write the file; refresh the atlas
 ```
 
@@ -893,6 +940,10 @@ create-engram(brain, title?, fields?, body?, concept?, concept_field?, reuse_if_
 - **The header is always generated from config**, never from a template, so a
   new engram is exactly what a rebuild would produce. `content_template`
   covers the prose only.
+- **`brain` is required** — creating needs a brain, and none is guessed
+  (§3.2).
+- **`body` in the result** is where the body starts: an editor client opens
+  the file with the cursor there. It is absent when nothing was written.
 - **Errors with codes:** `empty_slug`, `collision`, `prefix` (an unknown
   `filename.prefix`), `concept`, `concept_field` (§5.4).
 - **`reuse_if_exists`** changes only `collision`: the existing file is the
@@ -906,7 +957,7 @@ create-engram(brain, title?, fields?, body?, concept?, concept_field?, reuse_if_
 |---|---|
 | `%title%` | the title as given |
 | `%date%` | today, in `engrams.date_format` |
-| `%cursor%` | where writing starts; removed from the file |
+| `%body%` | where the body goes — `--body`'s text, or where an editor puts the cursor; removed from the file |
 
 The resulting file with the defaults:
 
@@ -931,61 +982,75 @@ tags: []
 
 ### 13.1 Engrams and one engram
 
-- `engrams [--concept C]` — every engram: filename, title, concept fields,
-  `modified`; with `--concept`, those naming `C`, resolved first, so any
-  spelling finds it.
-- `engram <file>` — its atlas entry, its backlinks, its content, and the
-  brain's two date formats, for reading the engram's date: the filename
-  prefix in `filename.date_format`, else `created` in `date_format`.
-- `frontmatter <file>` — every configured frontmatter field, sorted by name:
-  `name`, `kind`, `list`, and for concept fields `concept_type` and
+- `engrams [--concept C]` — every engram: `brain`, filename, title, concept
+  fields, `modified`; newest first. With `--concept`, those naming `C`, which
+  is resolved in each brain, so any spelling finds it.
+- `engram <engram> [--body]` — its atlas entry, its backlinks, its content,
+  and the brain's two date formats, for reading the engram's date: the
+  filename prefix in `filename.date_format`, else `created` in `date_format`.
+  `--body` answers the content without the frontmatter and the `SYNAPSES`
+  block.
+- `frontmatter <engram>` — every configured frontmatter field, sorted by
+  name: `name`, `kind`, `list`, and for concept fields `concept_type` and
   `concept_form`, with its values as written (`[]` or `""` when empty); a
   concept field adds each value's resolution, `{ text, key, display_name }`.
+  Fields in the file the config does not name come under `other`, as written.
   Read from the file, not the atlas, since value fields are not indexed.
-  Fields in the file the config does not name are left out.
 
 ### 13.2 Neighbours
 
 Everything one engram connects to:
 
 ```
-neighbours(file)   → { synapses, backlinks, concepts }
+neighbours(engram)   → { synapses, backlinks, concepts }
   synapses  = per synapse field, in name order: { field, path, title }
   backlinks = engrams linking here that are not among its synapses: { path, title }
-  concepts  = per concept field, in name order: { field, key, engrams },
+  concepts  = per concept field, in name order, then the body's #slug
+              mentions with field null: { field, key, engrams },
               key as resolved (the text as written when undeclared),
               engrams = the other engrams naming it
 ```
 
 This is what a navigation view shows: synapses by field, backlinks, and each
-concept as `#key` with the engrams that share it.
+concept as `#key` with the engrams that share it. All of it is one brain's:
+synapses never cross brains (§22).
 
 ### 13.3 Last engram
 
-`last` answers the engram with the newest `modified`.
+`last` answers the engram with the newest `modified`, across the brains
+searched: `{ brain, path, title, modified }`, or `null` when there is none.
 
 ### 13.4 Search
 
 ```
-search(query, fields?)   → { path, title, score }[]
+search(query, fields?)   → { brain, path, title, score }[]
 ```
 
 Fuzzy matching over each engram's title, filename and concept fields, from
 the atlas; a concept value matches by what it is written as and by its
 concept's display name, so `alice` finds `participants: [Alice Smith]` and
-`tags: [alice_smith]` alike. `fields` narrows which are matched. Best first.
-No body search: the atlas holds no bodies.
+`tags: [alice_smith]` alike. Across all brains unless `--brain` names some;
+best score first.
 
-### 13.5 Resolving a word
+`--fields` narrows what is matched: `title`, `filename`, or a concept field's
+name, comma-separated. A field only some brains have is matched where it
+exists; one no searched brain has is `usage`. No body search: the atlas holds
+no bodies.
+
+### 13.5 Resolving text
 
 ```
-resolve-word(text)   → { concept } | { engram } | {}
+resolve-text(brain, text)   → { concept?, engrams }
+  concept = the registered concept text resolves to (§10.3)
+  engrams = engrams whose title equals text (ignoring case), or whose slug
+            is slugify(text); newest first
 ```
 
-What a word should become when a person turns it into a reference: a
-registered concept (resolved, §10.3) or an engram whose title or slug
-matches. A client then writes `#key` for a concept, `[text](path)` for an
-engram, or offers to create an engram with the word as its title.
+What a piece of text should become when a person turns it into a reference.
+Both can match: a client offers both, `#key` for the concept and
+`[text](path)` for an engram; with neither, it may offer to create an engram
+with the text as its title. `brain` is required: a reference is written into
+one engram, so only that brain's meaning counts.
 
 ---
 
@@ -993,58 +1058,70 @@ engram, or offers to create an engram with the word as its title.
 
 ### 14.1 Tasks
 
-`tasks [--state not_done|done] [--engram <file>]` — every task, by state; with
-`--engram`, one engram's (an unknown file is an error).
+```
+tasks [--state not_done|done] [--engram <engram>] [--concept C]
+      [--due-before D] [--overdue]                → { tasks, done, total }
+```
+
+Every task across the brains searched, one flat list:
+
+```json
+{ "tasks": [
+    { "brain": "work", "engram": "2026-10-20_weekly_sync.md", "line": 14,
+      "text": "Send budget draft #alice_smith [due:: 2026-10-25]",
+      "state": "not_done", "due": "2026-10-25", "concepts": ["alice_smith"] } ],
+  "done": 0, "total": 1 }
+```
+
+- Filters combine; a filter left out filters nothing.
+  - `--state` — one state
+  - `--engram` — one engram's tasks; it also decides the brain
+  - `--concept C` — tasks mentioning `C`, resolved in each brain
+  - `--due-before D` — `due` before `D` (`date_format` or ISO)
+  - `--overdue` — `due` before today, and `not_done`
+- `done` and `total` count the tasks answered.
+- Order: brain, then engram by newest `modified`, then line. Grouping — by
+  engram, by date, by concept — and any other order are a client's (§1.2).
 
 ### 14.2 Toggling a task
 
 ```
-toggle-task(file, line)   → { file, line, state }
-  1. the line must still be the task the atlas indexed — otherwise an error,
-     code "stale", and that engram is re-indexed
-  2. not_done → the first done marker; done → the first not_done marker
-  3. rewrite that line only; refresh the atlas
+toggle-task(engram, line, state?, expect?)   → { brain, engram, line, state }
+  1. the line must be a list item → else not_a_list_item
+  2. expect given → the line's text, without its marker, must equal it →
+     else stale
+  3. state given → the first marker of that state (none: no marker);
+     otherwise the next step of the cycle:
+       none → every not_done marker, in order → the first done marker → none
+  4. rewrite the marker only; refresh the atlas
 ```
+
+With the defaults the cycle is `- x` → `- [ ] x` → `- [x] x` → `- x`; with
+`not_done: ["[ ]", "[/]"]` it passes through `[/]`. Further `done` markers
+(`[X]`) count as done when read, and are never written. `expect` guards a
+caller whose line number may be out of date; an editor that has just read the
+line can leave it out.
 
 ### 14.3 The engram agenda
 
-An agenda for one engram and everything connected to it:
+Everything connected to one engram, and its tasks:
 
 ```
-agenda(file, depth?)   → { chain, tasks, done, total }
+agenda(engram, depth?, filters)   → { chain, tasks, done, total }
   1. depth = depth or agenda.depth; none walks the whole chain
-  2. breadth-first from file over every synapse field, both directions,
+  2. breadth-first from engram over every synapse field, both directions,
      with a visited set — each engram once, at its shortest distance, so a
      cycle ends the walk
-  3. chain = [{ distance, engrams: [{ path, title }] }], distance 0 the file;
-     within a distance by date where the engram has one, undated last
-  4. tasks = every task of every engram in the chain, in chain order, each
-     with its engram; done and total count all of them
+  3. chain = [{ distance, engrams: [{ path, title }] }], distance 0 the
+     engram; within a distance by date where the engram has one, undated last
+  4. tasks = the tasks of every engram in the chain, in chain order, with
+     the filters of tasks (§14.1); done and total count them
 ```
 
-A client renders it as a chain section and a task list:
+An engram with no tasks is still in the chain. A meeting series is the
+typical chain: this week's notes, the earlier ones, the project above them.
 
-```markdown
-# Agenda — Weekly sync
-
-## Chain
-
-- Weekly sync
-- 1 step
-  - Project kickoff
-  - Follow-up
-- 2 steps
-  - Q4 planning
-
-## Tasks
-
-Done: 3 / 7
-
-- [ ] Agree on scope — Weekly sync
-- [ ] Send budget draft — Project kickoff
-```
-
-The brain agenda is `tasks`, grouped by engram, most recently modified first.
+A brain-wide agenda is `tasks`; a client groups it as it likes.
 
 ---
 
@@ -1064,6 +1141,7 @@ is left alone. `engrams.index.stats` lists the bullets inside `INDEX:STATS`.
 | `recent` | engrams by `modified`, newest first, linked |
 | `concepts` | display names by type |
 | `roots` | engrams with an empty `up` field — the closest a flat brain has to a table of contents |
+| `overdue` | open tasks whose `due` has passed, soonest first, each linking its engram |
 | `not_done_tasks` | open tasks, each linking its engram |
 | `tasks` | every task, each linking its engram |
 
@@ -1094,7 +1172,7 @@ caller confirms with `force`.
 ### 16.1 Rename
 
 ```
-rename-engram(file, title)   → { path, rewritten }
+rename-engram(engram, title)   → { brain, path, rewritten }
   1. new filename: the original's prefix kept (a leading date in
      filename.date_format; the longest registered concept key followed by _),
      new slug from title
@@ -1104,14 +1182,15 @@ rename-engram(file, title)   → { path, rewritten }
   4. refresh the atlas
 ```
 
-Body links are rewritten best effort: links written the normal way are
+The heading in the file is prose and stays as it is (§5.3). Body links are
+rewritten best effort: links written the normal way are
 caught, unusual hand-written ones may not be, and `check` reports what was
 missed as `broken_link`.
 
 ### 16.2 Delete
 
 ```
-delete-engram(file, force?)   → { referencing }
+delete-engram(engram, force?)   → { brain, path, referencing }
   1. referencing = engrams with a synapse to it, or a body link
   2. referencing non-empty and not force → error, code "referenced", listing them
   3. remove it from every synapse field naming it
@@ -1119,7 +1198,8 @@ delete-engram(file, force?)   → { referencing }
 ```
 
 Synapses are cleaned up, undoing what attach kept in sync. Body links are left
-as they are and reported as `broken_link`.
+as they are and reported as `broken_link`. The file is deleted, not moved to
+a trash; a brain under version control keeps its history.
 
 ---
 
@@ -1140,22 +1220,42 @@ mia [command] --help
 One JSON object on stdout, exit status to match:
 
 ```json
-{ "ok": true, "result": { "path": "/home/me/notes/work/2026-08-01_project_x.md", "created": true } }
+{ "ok": true, "result": { "brain": "work", "path": "/home/me/notes/work/2026-08-01_project_x.md", "created": true } }
 { "ok": false, "error": "(work) 2026-08-01_project_x.md already exists", "code": "collision" }
 ```
 
 `0` for `ok`, `1` otherwise. Errors name their brain, `(work) …`. `code` is
 present wherever a caller can act on the failure. Diagnostics go to stderr,
 so stdout is always one object. `--help` prints usage as text and loads no
-config, so it works when nothing else does. `<file>` arguments are filenames
-in the brain, or paths, which also decide the brain (§3.2).
+config, so it works when nothing else does.
 
-Two codes belong to the CLI itself, not to any operation:
+**A read with no matches** answers `ok` with an empty list (or `null` for a
+single result); `not_found` is only for a thing that was named.
+
+**`<engram>` arguments** are read one way everywhere:
+
+| Given | Means |
+|---|---|
+| contains a `/` — `~/notes/work/x.md`, `./x.md` | a path to that file; its folder decides the brain. Outside every brain → `not_in_brain`; in a subfolder of one → `not_an_engram` |
+| no `/` — `x.md`, `x` | an engram name, `.md` optional, looked up: in `--brain` when given, else in every brain — one match is it, none is `not_found`, several are `ambiguous`, listing the brains |
+
+A command taking two engrams (`attach-synapse`, `detach-synapse`) resolves
+them as a pair, in one brain: `--brain` when given; else a path's brain, the
+other looked up there; two paths in different brains are `cross_brain`; two
+names are looked up in the brains holding both — one is it, several are
+`ambiguous`, none is `not_found`.
+
+Codes that belong to the CLI rather than to one operation:
 
 | Code | Meaning |
 |---|---|
-| `usage` | the command line is wrong: no command, an unknown command, a missing or extra argument, an unknown flag, a missing required flag |
-| `not_found` | a named thing does not exist, such as a help topic |
+| `usage` | the command line is wrong: no command, an unknown command, a missing or extra argument, an unknown flag, a missing required flag, flags that contradict each other |
+| `brain` | a command that needs one brain was given none (§3.2) |
+| `not_found` | a named thing does not exist: a brain, an engram, a concept, a field value, a help topic |
+| `ambiguous` | an engram name found in more than one brain |
+| `cross_brain` | two engrams that must share a brain do not |
+| `not_in_brain` | a path outside every registered brain |
+| `not_an_engram` | a path inside a brain that is not a top-level `.md` file |
 
 `help` is the one command that does not answer JSON; when it fails, the error
 goes to stderr, stdout stays empty, and the exit status is `1`.
@@ -1163,50 +1263,54 @@ goes to stderr, stdout stays empty, and the exit status is `1`.
 ### 17.2 Commands
 
 An ordered list: `commands` prints it as a schema, `--help` reads the same
-table, and their order is stable.
+table, and their order is stable. "All" in the brain column: every brain
+unless `--brain` (repeatable) names some; "required": `--brain` must be
+given; "engram": the engram argument decides.
 
-| Command | Answers |
-|---|---|
-| `brains` | name, location, whether it exists, whether it has `.mia_dna.json` |
-| `register-brain <path> [--name N]` | the brain registered |
-| `deregister-brain <name>` | the brain removed |
-| `config [--defaults]` | the merged config, or with `--defaults` the built-in defaults alone (§4) |
-| `engrams [--concept C]` | §13.1 |
-| `engram <file>` | §13.1 |
-| `frontmatter <file>` | §13.1 |
-| `neighbours <file>` | §13.2 |
-| `last` | §13.3 |
-| `search --query Q [--fields F]` | §13.4 |
-| `resolve-word <text>` | §13.5 |
-| `tasks [--state S] [--engram <file>]` | §14.1 |
-| `agenda <file> [--depth N]` | §14.3 |
-| `concepts [--type T]` | per concept: key, display name, type, aliases, note, meta, engrams naming it |
-| `undeclared-concepts` | §10.4 |
-| `check` | the problems (§11.4) |
-| `rebuild [--fix]` | the problems left after it |
-| `rebuild-index` | the path written |
-| `create-engram [--title T] [--field k=v,…] [--body -] [--concept C] [--concept-field F] [--reuse-if-exists]` | `{ path, cursor?, created }` |
-| `attach-synapse <source> <field> <target>` | §8.1 |
-| `detach-synapse <source> <field> <target>` | §8.2 |
-| `edit-frontmatter <source> <field> <value>` | §9 |
-| `create-concept --name N --type T [--slug S] [--meta k=v]` | §10.4 |
-| `edit-concept --name N [--type T] [--meta k=v]` | §10.4 |
-| `alias-concept --name N --alias A` | §10.4 |
-| `register-concept --mention M (--type T \| --alias-of K)` | §10.4 |
-| `attach-concept <source> <field> <concept>` | §10.4 |
-| `detach-concept <source> <field> <concept>` | §10.4 |
-| `toggle-task <file> <line>` | §14.2 |
-| `rename-engram <file> --title T` | §16.1 |
-| `delete-engram <file> [--force]` | §16.2 |
-| `version` | `{ version, commit }`, set at build time from the git tag |
-| `help [topic]` | a manual page rendered as text (§17.4); not JSON |
-| `man --dir <dir>` | the manual pages written as roff into `<dir>` (§17.4) |
-| `commands` | every command with its arguments, as a schema |
+| Command | Brain | Answers |
+|---|---|---|
+| `brains` | — | name, location, whether it exists, whether it has `.mia_dna.json` |
+| `register-brain <path> [--name N]` | — | the brain registered (§3.1) |
+| `deregister-brain <name>` | — | the brain removed; unknown → `not_found` |
+| `config [--defaults]` | optional | the merged config, or with `--defaults` the built-in defaults alone (§4.3) |
+| `engrams [--concept C]` | all | §13.1 |
+| `engram <engram> [--body]` | engram | §13.1 |
+| `frontmatter <engram>` | engram | §13.1 |
+| `neighbours <engram>` | engram | §13.2 |
+| `last` | all | §13.3 |
+| `search --query Q [--fields F]` | all | §13.4 |
+| `resolve-text <text>` | required | §13.5 |
+| `tasks [--state S] [--engram <engram>] [--concept C] [--due-before D] [--overdue]` | all | §14.1 |
+| `agenda <engram> [--depth N]` + the `tasks` filters | engram | §14.3 |
+| `concepts [--type T]` | all | per concept: `brain`, key, display name, type, aliases, note, meta, the engrams naming it, its open tasks' count |
+| `undeclared-concepts` | all | §10.4 |
+| `check [--strict]` | all | the problems (§11.4), rebuilding each atlas and writing no engram; with `--strict`, any problem → `ok: false`, code `problems`, the problems as `result`, exit `1` |
+| `rebuild [--fix]` | required | the problems left after it (§11.3, §11.5) |
+| `rebuild-index` | required | the path written (§15) |
+| `create-engram [--title T] [--field k=v,…] [--body -] [--concept C] [--concept-field F] [--reuse-if-exists]` | required | §12 |
+| `attach-synapse <source> <field> <target>` | engrams | §8.1 |
+| `detach-synapse <source> <field> <target>` | engrams | §8.2 |
+| `edit-frontmatter <engram> <field> <value> [--remove]` | engram | §9 |
+| `create-concept --name N --type T [--slug S] [--meta k=v]` | required | §10.4 |
+| `edit-concept --name N [--type T] [--display-name D] [--note N] [--meta k=v]` | required | §10.4 |
+| `alias-concept --name N --alias A [--remove]` | required | §10.4 |
+| `register-concept --mention M (--type T \| --alias-of K)` | required | §10.4; both or neither of `--type`, `--alias-of` → `usage` |
+| `attach-concept <engram> <field> <concept>` | engram | §10.4 |
+| `detach-concept <engram> <field> <concept>` | engram | §10.4 |
+| `toggle-task <engram> <line> [--state S] [--expect T]` | engram | §14.2 |
+| `rename-engram <engram> --title T` | engram | §16.1 |
+| `delete-engram <engram> [--force]` | engram | §16.2 |
+| `version` | — | `{ version, commit }`, set at build time from the git tag; `"dev"` for an untagged build |
+| `help [topic]` | — | a manual page rendered as text (§17.4); not JSON |
+| `man --dir <dir>` | — | the manual pages written as roff into `<dir>`, directories created, existing pages overwritten; answers the files written (§17.4) |
+| `commands` | — | every command, in table order, with its arguments as a schema: name, type, required, repeatable, help |
 
 - `--field tags=java,streams` fills one field, once per field; values are
   comma-split. `--meta k=v` splits at the first `=` and is not comma-split.
   `--meta k=` removes a key.
 - `--body -` reads the body from stdin; `--body <text>` takes it as given.
+- No command takes a sort, group or limit option: output order is fixed and
+  documented per command, and presentation is a client's (§1.2).
 
 ### 17.3 Running beside others
 
@@ -1256,18 +1360,17 @@ docs/
 
 ## 18. The viewer
 
-`mia view [file]` is for reading and moving around a brain in a terminal. It
+`mia view [path]` is for reading and moving around a brain in a terminal. It
 does not write prose: it hands the terminal to `$VISUAL` or `$EDITOR` on the
 engram shown and takes it back when the editor exits, then shows the engram
 as it now is.
 
 ### 18.1 Opening
 
-| `[file]` | Opens |
+| `[path]` | Opens |
 |---|---|
-| nothing | the engram picker of the brain resolved (§3.2); with none resolved, the brain picker first |
-| a path to an engram | that engram; its folder decides the brain |
-| a filename, with or without `.md` | that engram in the brain resolved (§3.2) |
+| nothing | the brain picker, or with `--brain` that brain's engram picker |
+| an engram (§17.1) | that engram |
 | a registered brain's folder | that brain's engram picker |
 
 An engram is a top-level `.md` file in a registered brain's folder; anything
@@ -1278,7 +1381,7 @@ any other command:
 |---|---|
 | a `.md` file outside every registered brain | `not_in_brain`, with the hint to `register-brain` its folder |
 | a `.md` file in a subfolder of a brain | `not_an_engram` |
-| a filename with no brain resolved | `brain` |
+| an engram name in several brains | `ambiguous` |
 | a file that does not exist, or is not `.md` | `not_found` |
 
 The viewer creates nothing: a missing engram is `not_found`, and creating is
@@ -1348,7 +1451,7 @@ about the brain:
 - **The active brain** — a session's default, passed as `--brain`.
 - **Pickers and views** — choosing a brain, a field, a concept; the navigate
   picker over `neighbours`; agenda views over `tasks` and `agenda`.
-- **Writing at a cursor** — inserting `#key` or a link from `resolve-word`,
+- **Writing at a cursor** — inserting `#key` or a link from `resolve-text`,
   over LSP completion and code actions where the editor has them.
 
 A client that needs a minimum `mia` checks `mia version` (or the server's
@@ -1392,8 +1495,9 @@ later command plugs into.
    `concept_form`, concept prefixes, every concept command, `frontmatter`,
    `edit-frontmatter`, the concept problems and their repair
 4. **Navigation** — `neighbours`, `last`, `create-engram --reuse-if-exists`
-5. **Agenda** — `agenda`, `toggle-task`, `tasks --engram`
-6. **Search and words** — `search`, `resolve-word`, prose mentions in the
+5. **Agenda** — `agenda`, `toggle-task`, the task filters, `#slug` and
+   `[due:: …]` in tasks, the `overdue` index section
+6. **Search and text** — `search`, `resolve-text`, prose mentions in the
    atlas
 7. **Generated index** — `rebuild-index`
 8. **Rename, delete and detach** — `rename-engram`, `delete-engram`,
@@ -1435,8 +1539,12 @@ releases to follow.
   synapse field, the separator inside the block, fields sorted by name.
 - **A concept prefix is also a concept field value** — never cosmetic, so
   nothing visible in a filename is invisible to the atlas.
-- **Tasks carry no metadata** — plain GitHub checkboxes. Which markers count
-  is configurable, so an existing brain's convention is not ignored.
+- **Task metadata is readable inline text only** — `#slug` for who or what,
+  `[due:: …]` for when; the line stays a plain checkbox anywhere. Which
+  markers count is configurable, so an existing brain's convention is not
+  ignored.
+- **Toggling cycles like the editor does** — none, the not-done markers, done,
+  none; `--state` jumps, `--expect` guards a stale line number.
 - **One strict `slugify` for filenames and concept keys** — the same on every
   system, safe everywhere a filename or a `#word` goes.
 - **Exact mentions resolve before slugified ones** — a slug is lossy.
@@ -1465,9 +1573,19 @@ releases to follow.
   model's config is `mia`'s tiers only.
 - **The engram agenda walks breadth-first, grouped by distance** — each engram
   once, cycles end the walk, and `depth` caps a densely linked brain.
-- **No current brain in the core** (§3.2) — the brain comes from the
-  arguments or the working directory, never from an earlier run; a brain held
-  for a session is a client's.
+- **No current brain, no working directory** (§3.2) — the brain comes from
+  `--brain` or an engram argument only, so a command answers the same from any
+  directory; reads without one span every brain. A brain held for a session
+  is a client's.
+- **No cross-brain synapses** — a synapse is a relative markdown link and
+  syncs its inverse; across brains the link depends on where folders sit on
+  one machine, and the inverse would write into another repository. A plain
+  body link to another brain still works, untracked.
+- **The core answers data, clients present it** (§1.2) — no grouping, sorting
+  or limit options; every result has one documented order.
+- **Prefer what works in Obsidian** (§1.2) — `#slug` tags, markdown links,
+  frontmatter properties and Dataview's `[key:: value]` keep a brain usable as
+  a vault.
 - **The CLI is stateless; clients hold session state** (§2) — every run can be
   understood from its command line alone, and what only matters while
   something runs — history, the brain being browsed — dies with it.
