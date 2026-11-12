@@ -42,13 +42,36 @@ type Invocation struct {
 // a cycle. Order is the listed order.
 var table []Command
 
+var brainFlag = Flag{Name: "brain", Value: "name", Summary: "a registered brain"}
+
 func init() {
 	table = []Command{
 		{
+			Name:    "brains",
+			Summary: "the registered brains",
+			Run:     runBrains,
+		},
+		{
+			Name:    "register-brain",
+			Summary: "register a folder as a brain, creating it when missing",
+			Args:    []Arg{{Name: "path", Summary: "the brain's folder"}},
+			Flags:   []Flag{{Name: "name", Value: "name", Summary: "the brain's name; the folder's basename when omitted"}},
+			Run:     runRegisterBrain,
+		},
+		{
+			Name:    "deregister-brain",
+			Summary: "remove a brain from the registry, leaving its folder alone",
+			Args:    []Arg{{Name: "name", Summary: "the brain to remove"}},
+			Run:     runDeregisterBrain,
+		},
+		{
 			Name:    "config",
 			Summary: "the merged config, or the built-in defaults alone",
-			Flags:   []Flag{{Name: "defaults", Summary: "only the built-in defaults, to copy keys worth changing from"}},
-			Run:     runConfig,
+			Flags: []Flag{
+				brainFlag,
+				{Name: "defaults", Summary: "only the built-in defaults, to copy keys worth changing from"},
+			},
+			Run: runConfig,
 		},
 		{
 			Name:    "version",
