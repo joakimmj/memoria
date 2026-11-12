@@ -5,8 +5,8 @@ import (
 	"io"
 )
 
-// parse parses argv against cmd. Flags and positionals may interleave; `--`
-// ends flags. -h/--help yields an error wrapping flag.ErrHelp.
+// parse lets flags and positionals interleave; `--` ends flags. -h/--help →
+// error wrapping flag.ErrHelp.
 func parse(cmd Command, argv []string) (Invocation, error) {
 	fs := flag.NewFlagSet(cmd.Name, flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
@@ -19,8 +19,8 @@ func parse(cmd Command, argv []string) (Invocation, error) {
 		}
 	}
 
-	var pos []string // positionals collected so far
-	input := argv    // what's left to parse
+	var pos []string
+	input := argv
 
 	for {
 		if err := fs.Parse(input); err != nil {
@@ -29,20 +29,20 @@ func parse(cmd Command, argv []string) (Invocation, error) {
 		rest := fs.Args()
 
 		if len(rest) == 0 {
-			break // A: everything consumed
+			break
 		}
 
 		consumed := len(input) - len(rest)
 		if consumed > 0 && input[consumed-1] == "--" {
-			pos = append(pos, rest...) // B: after "--", all positional
+			pos = append(pos, rest...) // after "--": all positional
 			break
 		}
 
-		pos = append(pos, rest[0]) // C: one positional, then keep parsing
+		pos = append(pos, rest[0]) // Parse stops at a positional; take it, go on
 		input = rest[1:]
 	}
 
-	// Visit: only flags actually given.
+	// Visit skips flags not given.
 	flags := map[string]string{}
 	fs.Visit(func(f *flag.Flag) {
 		flags[f.Name] = f.Value.String()
@@ -54,7 +54,6 @@ func parse(cmd Command, argv []string) (Invocation, error) {
 	return Invocation{Args: pos, Flags: flags}, nil
 }
 
-// checkCounts checks positional counts and required flags.
 func checkCounts(cmd Command, pos []string, flags map[string]string) error {
 	for i, a := range cmd.Args {
 		if i >= len(pos) && !a.Optional {

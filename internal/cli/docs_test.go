@@ -7,7 +7,6 @@ import (
 	"github.com/joakimmj/memoria/docs"
 )
 
-// TestEveryCommandHasPage: no command without a manual page.
 func TestEveryCommandHasPage(t *testing.T) {
 	for _, cmd := range table {
 		t.Run(cmd.Name, func(t *testing.T) {

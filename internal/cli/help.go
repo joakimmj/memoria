@@ -35,7 +35,6 @@ func findPage(topic string) (string, error) {
 	return "", notFoundErrorf("no manual page for %q", topic)
 }
 
-// loadPage reads a page and adds its generated sections.
 func loadPage(filename string) (page, error) {
 	src, err := fs.ReadFile(docs.FS, filename)
 	if err != nil {
@@ -49,7 +48,6 @@ func loadPage(filename string) (page, error) {
 	return p, nil
 }
 
-// writeHelp writes the page for topic to w as text.
 func writeHelp(w io.Writer, topic string) error {
 	filename, err := findPage(topic)
 	if err != nil {
@@ -71,7 +69,6 @@ func runHelp(inv Invocation) (any, error) {
 	return nil, writeHelp(inv.Stdout, topic)
 }
 
-// manResult is the result of `mia man`.
 type manResult struct {
 	Dir   string   `json:"dir"`
 	Pages []string `json:"pages"` // relative to Dir

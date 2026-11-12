@@ -38,9 +38,8 @@ type Invocation struct {
 	Stdout io.Writer // Text commands only
 }
 
-// table is the command list; its order is stable (mia-commands(1)). Filled
-// in init: Run funcs read it, and a self-referencing initializer is an
-// initialization cycle.
+// table is filled in init: Run funcs read table, so an initializer would be
+// a cycle. Order is the listed order.
 var table []Command
 
 func init() {
@@ -71,7 +70,6 @@ func init() {
 	}
 }
 
-// lookup returns the command named name.
 func lookup(name string) (Command, bool) {
 	for _, c := range table {
 		if c.Name == name {
@@ -97,7 +95,6 @@ func (c Command) synopsis() string {
 	return strings.Join(parts, " ")
 }
 
-// usage formats the flag for a synopsis.
 func (f Flag) usage(bracket bool) string {
 	s := "--" + f.Name
 	if f.Value != "" {

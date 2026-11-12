@@ -82,7 +82,6 @@ func TestInline(t *testing.T) {
 	}
 }
 
-// TestEveryPageRenders: every embedded page parses and renders.
 func TestEveryPageRenders(t *testing.T) {
 	files, err := fs.Glob(docs.FS, "*.md")
 	if err != nil {

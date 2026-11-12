@@ -9,7 +9,6 @@ import (
 	"io"
 )
 
-// Exit statuses, see mia(1).
 const (
 	exitOK   = 0
 	exitFail = 1
@@ -54,7 +53,7 @@ func Run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	return finish(cmd, stdout, stderr, result, err)
 }
 
-// finish reports the outcome: envelope, or stderr for Text commands.
+// finish: Text commands report errors on stderr, others in the envelope.
 func finish(cmd Command, stdout, stderr io.Writer, result any, err error) int {
 	if !cmd.Text {
 		return writeEnvelope(stdout, stderr, result, err)
@@ -66,7 +65,6 @@ func finish(cmd Command, stdout, stderr io.Writer, result any, err error) int {
 	return exitOK
 }
 
-// writeEnvelope writes result or err and returns the exit status.
 func writeEnvelope(stdout, stderr io.Writer, result any, err error) int {
 	env := envelope{OK: true, Result: result}
 	status := exitOK
@@ -81,7 +79,6 @@ func writeEnvelope(stdout, stderr io.Writer, result any, err error) int {
 	return status
 }
 
-// showHelp prints the page for --help.
 func showHelp(stdout, stderr io.Writer, topic string) int {
 	if err := writeHelp(stdout, topic); err != nil {
 		fmt.Fprintf(stderr, "mia: %v\n", err)

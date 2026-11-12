@@ -9,7 +9,6 @@ import (
 	"testing"
 )
 
-// run runs a command line in-process.
 func run(t *testing.T, args ...string) (stdout, stderr string, status int) {
 	t.Helper()
 	var out, errOut bytes.Buffer

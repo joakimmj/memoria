@@ -45,7 +45,6 @@ type block struct {
 	lines []string // codeBlock only
 }
 
-// parsePage parses a page; filename gives name and section.
 func parsePage(filename string, src string) (page, error) {
 	base := strings.TrimSuffix(filename, ".md")
 	dot := strings.LastIndexByte(base, '.')
@@ -113,7 +112,7 @@ func parsePage(filename string, src string) (page, error) {
 	return p, nil
 }
 
-// addGenerated adds the table-derived sections and sorts by sectionOrder.
+// addGenerated adds table-derived sections, then sorts by sectionOrder.
 func addGenerated(p *page) {
 	switch {
 	case p.name == "mia" && p.section == "1":
@@ -164,8 +163,6 @@ func options(cmd Command) []block {
 	return bs
 }
 
-// Terminal text layout.
-
 const (
 	textIndent = 7
 	textWidth  = 80
@@ -201,7 +198,7 @@ func renderText(p page) string {
 	return b.String()
 }
 
-// writeWrapped word-wraps text, prefixing the first line and the rest.
+// writeWrapped prefixes the first line with first, the rest with rest.
 func writeWrapped(b *strings.Builder, first, rest, text string) {
 	line := first
 	empty := true
@@ -219,7 +216,6 @@ func writeWrapped(b *strings.Builder, first, rest, text string) {
 	b.WriteString(line + "\n")
 }
 
-// renderRoff renders p with the man(7) macros.
 func renderRoff(p page) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, ".TH %q %q \"\" \"mia\" \"memoria manual\"\n", strings.ToUpper(p.name), p.section)
@@ -249,12 +245,12 @@ func renderRoff(p page) string {
 	return b.String()
 }
 
-// roffEscape escapes \ and turns - into a minus.
+// roffEscape: - becomes a minus, not a hyphen.
 func roffEscape(s string) string {
 	return strings.NewReplacer(`\`, `\e`, "-", `\-`).Replace(s)
 }
 
-// roffLine guards a line that would start a roff request.
+// roffLine guards lines that would start a roff request.
 func roffLine(s string) string {
 	if strings.HasPrefix(s, ".") || strings.HasPrefix(s, "'") {
 		return `\&` + s
@@ -270,8 +266,7 @@ func roffInline(s string) string {
 	return inline(s, `\fB`, `\fR`, roffEscape)
 }
 
-// inline wraps **…** and `…` spans in on/off and escapes all text. Unclosed
-// markers stay literal.
+// inline wraps **…** and `…` in on/off; unclosed markers stay literal.
 func inline(s, on, off string, escape func(string) string) string {
 	var b strings.Builder
 	for s != "" {
