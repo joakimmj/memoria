@@ -7,15 +7,16 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/joakimmj/memoria/docs"
 )
 
 // topicPattern keeps glob metacharacters out of findPage.
-var topicPattern = regexp.MustCompile(`^[a-z0-9-]+$`)
+var topicPattern = regexp.MustCompile(`^[a-z0-9-]+(\.[1-8])?$`)
 
-// findPage maps a help topic to its docs file: "" → mia.1.md,
-// x → mia-x.<n>.md or x.<n>.md.
+// findPage: "" → mia.1.md; x.5 → mia-x.5.md or x.5.md; x → mia-x.1.md, else
+// any section of mia-x or x.
 func findPage(topic string) (string, error) {
 	if topic == "" {
 		return "mia.1.md", nil
@@ -23,7 +24,11 @@ func findPage(topic string) (string, error) {
 	if !topicPattern.MatchString(topic) {
 		return "", notFoundErrorf("no manual page for %q", topic)
 	}
-	for _, pattern := range []string{"mia-" + topic + ".*.md", topic + ".*.md"} {
+	patterns := []string{"mia-" + topic + ".md", topic + ".md"}
+	if !strings.Contains(topic, ".") {
+		patterns = []string{"mia-" + topic + ".1.md", "mia-" + topic + ".*.md", topic + ".*.md"}
+	}
+	for _, pattern := range patterns {
 		matches, err := fs.Glob(docs.FS, pattern)
 		if err != nil {
 			return "", err

@@ -31,6 +31,7 @@ func decode(t *testing.T, stdout string) map[string]any {
 }
 
 func TestRunEnvelope(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	tests := []struct {
 		name       string
 		args       []string
@@ -40,6 +41,8 @@ func TestRunEnvelope(t *testing.T) {
 	}{
 		{name: "version", args: []string{"version"}, wantStatus: exitOK, wantOK: true},
 		{name: "commands", args: []string{"commands"}, wantStatus: exitOK, wantOK: true},
+		{name: "config", args: []string{"config"}, wantStatus: exitOK, wantOK: true},
+		{name: "config --defaults", args: []string{"config", "--defaults"}, wantStatus: exitOK, wantOK: true},
 		{name: "no command", args: nil, wantStatus: exitFail, wantCode: codeUsage},
 		{name: "unknown command", args: []string{"nope"}, wantStatus: exitFail, wantCode: codeUsage},
 		{name: "extra argument", args: []string{"version", "x"}, wantStatus: exitFail, wantCode: codeUsage},
@@ -76,6 +79,9 @@ func TestRunHelp(t *testing.T) {
 		{name: "--help", args: []string{"--help"}, wantStatus: exitOK, wantIn: "COMMANDS"},
 		{name: "help topic", args: []string{"help", "man"}, wantStatus: exitOK, wantIn: "mia man --dir <dir>"},
 		{name: "command --help", args: []string{"man", "--help"}, wantStatus: exitOK, wantIn: "mia man --dir <dir>"},
+		{name: "command wins over file format", args: []string{"help", "config"}, wantStatus: exitOK, wantIn: "mia-config - the merged config"},
+		{name: "section picks the page", args: []string{"help", "config.5"}, wantStatus: exitOK, wantIn: "config.json and .mia_dna.json"},
+		{name: "section without a page", args: []string{"help", "config.7"}, wantStatus: exitFail},
 		{name: "unknown topic", args: []string{"help", "nope"}, wantStatus: exitFail},
 		{name: "glob in topic", args: []string{"help", "*"}, wantStatus: exitFail},
 	}
