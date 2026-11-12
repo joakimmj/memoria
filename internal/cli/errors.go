@@ -5,12 +5,17 @@ import (
 	"fmt"
 
 	"github.com/joakimmj/memoria/internal/brain"
+	"github.com/joakimmj/memoria/internal/engram"
 )
 
 const (
 	codeUsage     = "usage"     // bad command line
 	codeNotFound  = "not_found" // e.g. unknown help topic
 	codeCollision = "collision"
+	codeBrain     = "brain" // a command needing one brain got none
+	codeEmptySlug = "empty_slug"
+	codePrefix    = "prefix"
+	codeTemplate  = "template"
 )
 
 var sentinelCodes = []struct {
@@ -20,6 +25,11 @@ var sentinelCodes = []struct {
 	{brain.ErrCollision, codeCollision},
 	{brain.ErrNotFound, codeNotFound},
 	{brain.ErrInvalidName, codeUsage},
+	{engram.ErrCollision, codeCollision},
+	{engram.ErrEmptySlug, codeEmptySlug},
+	{engram.ErrPrefix, codePrefix},
+	{engram.ErrTemplate, codeTemplate},
+	{engram.ErrNoTitle, codeUsage},
 }
 
 type coder interface {

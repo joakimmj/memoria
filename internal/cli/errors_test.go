@@ -57,3 +57,12 @@ func TestError(t *testing.T) {
 		})
 	}
 }
+
+func TestSentinelCodes(t *testing.T) {
+	for _, sc := range sentinelCodes {
+		wrapped := fmt.Errorf("(work) x: %w", fmt.Errorf("inner: %w", sc.err))
+		if got := codeOf(wrapped); got != sc.code {
+			t.Errorf("codeOf(%v) = %q, want %q", sc.err, got, sc.code)
+		}
+	}
+}

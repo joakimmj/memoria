@@ -65,6 +65,9 @@ func checkCounts(cmd Command, pos []string, flags map[string]string) error {
 	}
 	for _, f := range cmd.Flags {
 		if _, given := flags[f.Name]; f.Required && !given {
+			if f.Name == brainFlag.Name {
+				return noBrainError(cmd.Name)
+			}
 			return usageErrorf("%s: missing --%s", cmd.Name, f.Name)
 		}
 	}

@@ -31,6 +31,7 @@ stderr, so stdout is always one object.
 
 - `usage`: the command line is wrong: an unknown command, a missing or extra
   argument, an unknown flag.
+- `brain`: a command that writes in one brain was given no `--brain`.
 - `not_found`: a named thing does not exist: a brain, a help topic.
 - `collision`: the thing to add already exists, such as a brain's name or
   folder.
