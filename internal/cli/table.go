@@ -45,6 +45,12 @@ var table []Command
 func init() {
 	table = []Command{
 		{
+			Name:    "config",
+			Summary: "the merged config, or the built-in defaults alone",
+			Flags:   []Flag{{Name: "defaults", Summary: "only the built-in defaults, to copy keys worth changing from"}},
+			Run:     runConfig,
+		},
+		{
 			Name:    "version",
 			Summary: "the version and commit mia was built from",
 			Run:     runVersion,

@@ -39,4 +39,4 @@ stderr, so stdout is always one object.
 
 ## SEE ALSO
 
-mia-help(1), mia-commands(1)
+mia-help(1), mia-commands(1), mia-config(5)
