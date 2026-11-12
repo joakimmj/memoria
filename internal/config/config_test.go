@@ -37,7 +37,7 @@ func TestLoad(t *testing.T) {
 		{
 			name: "no files is the defaults",
 			check: func(t *testing.T, c Config) {
-				if c.Engrams.Filename.Prefix != "date" || c.Engrams.ContentTemplate != "# %title%\n\n%cursor%" {
+				if c.Engrams.Filename.Prefix != "date" || c.Engrams.ContentTemplate != "# %title%\n\n%body%" {
 					t.Errorf("not the defaults: %+v", c)
 				}
 			},
@@ -126,7 +126,7 @@ func TestDefaults(t *testing.T) {
 	want := Engrams{
 		DateFormat:      "YYYY-MM-DD",
 		Filename:        Filename{Prefix: "date", DateFormat: "YYYY-MM-DD"},
-		ContentTemplate: "# %title%\n\n%cursor%",
+		ContentTemplate: "# %title%\n\n%body%",
 	}
 	if c.Engrams != want {
 		t.Errorf("Defaults().Engrams = %+v, want %+v", c.Engrams, want)

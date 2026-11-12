@@ -39,9 +39,9 @@ The keys:
 - `engrams.filename.date_format`: the format of the `date` prefix. Default
   `YYYY-MM-DD`.
 - `engrams.content_template`: the text a new engram starts with.
-  `%title%` is the title as given, `%date%` today, and `%cursor%`
-  marks where writing starts and is removed. Default `# %title%`, a blank
-  line, then `%cursor%`.
+  `%title%` is the title as given, `%date%` today, and `%body%`
+  marks where the body goes and is removed. Default `# %title%`, a blank
+  line, then `%body%`.
 
 ## EXAMPLES
 

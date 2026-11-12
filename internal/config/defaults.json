@@ -2,6 +2,6 @@
   "engrams": {
     "date_format": "YYYY-MM-DD",
     "filename": { "prefix": "date", "date_format": "YYYY-MM-DD" },
-    "content_template": "# %title%\n\n%cursor%"
+    "content_template": "# %title%\n\n%body%"
   }
 }
