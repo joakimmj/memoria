@@ -7,9 +7,9 @@ mia-config - the merged config, or the built-in defaults alone
 ## DESCRIPTION
 
 Answers the configuration every other command uses: the built-in defaults,
-then the user's config, merged as described in mia-config(5). With
-`--defaults` it answers the built-in defaults alone, to copy the keys worth
-changing from.
+then the user's config, then with `--brain` that brain's `.mia_dna.json`,
+merged as described in mia-config(5). With `--defaults` it answers the
+built-in defaults alone, to copy the keys worth changing from.
 
 Nothing writes a config file: a missing one means the defaults.
 
@@ -26,6 +26,9 @@ The result has the shape of the config files, with every key present.
 A config file that cannot be read, is not valid JSON, holds an unknown key or
 a value of the wrong type is an error naming the file.
 
+- `not_found`: the brain is not registered.
+- `usage`: `--defaults` and `--brain` together.
+
 ## EXIT STATUS
 
 `0` when the config was read, `1` otherwise.
@@ -34,6 +37,7 @@ a value of the wrong type is an error naming the file.
 
 ```
 mia config
+mia config --brain work
 mia config --defaults
 ```
 

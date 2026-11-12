@@ -3,12 +3,24 @@ package cli
 import (
 	"errors"
 	"fmt"
+
+	"github.com/joakimmj/memoria/internal/brain"
 )
 
 const (
-	codeUsage    = "usage"     // bad command line
-	codeNotFound = "not_found" // e.g. unknown help topic
+	codeUsage     = "usage"     // bad command line
+	codeNotFound  = "not_found" // e.g. unknown help topic
+	codeCollision = "collision"
 )
+
+var sentinelCodes = []struct {
+	err  error
+	code string
+}{
+	{brain.ErrCollision, codeCollision},
+	{brain.ErrNotFound, codeNotFound},
+	{brain.ErrInvalidName, codeUsage},
+}
 
 type coder interface {
 	ErrorCode() string
@@ -34,6 +46,11 @@ func codeOf(err error) string {
 	var c coder
 	if errors.As(err, &c) {
 		return c.ErrorCode()
+	}
+	for _, sc := range sentinelCodes {
+		if errors.Is(err, sc.err) {
+			return sc.code
+		}
 	}
 	return ""
 }

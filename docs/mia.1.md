@@ -31,7 +31,9 @@ stderr, so stdout is always one object.
 
 - `usage`: the command line is wrong: an unknown command, a missing or extra
   argument, an unknown flag.
-- `not_found`: a named thing does not exist.
+- `not_found`: a named thing does not exist: a brain, a help topic.
+- `collision`: the thing to add already exists, such as a brain's name or
+  folder.
 
 ## EXIT STATUS
 
@@ -39,4 +41,4 @@ stderr, so stdout is always one object.
 
 ## SEE ALSO
 
-mia-help(1), mia-commands(1), mia-config(5)
+mia-help(1), mia-commands(1), mia-brains(1), mia-config(5)
