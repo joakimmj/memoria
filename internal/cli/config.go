@@ -13,11 +13,7 @@ func runConfig(inv Invocation) (any, error) {
 	if !withBrain {
 		return config.Load("")
 	}
-	r, err := loadRegistry()
-	if err != nil {
-		return nil, err
-	}
-	b, err := r.Get(name)
+	b, err := openBrain(name)
 	if err != nil {
 		return nil, err
 	}

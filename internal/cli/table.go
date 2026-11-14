@@ -44,6 +44,8 @@ var table []Command
 
 var brainFlag = Flag{Name: "brain", Value: "name", Summary: "a registered brain"}
 
+var requiredBrainFlag = Flag{Name: "brain", Value: "name", Summary: "the brain to write in", Required: true}
+
 func init() {
 	table = []Command{
 		{
@@ -72,6 +74,16 @@ func init() {
 				{Name: "defaults", Summary: "only the built-in defaults, to copy keys worth changing from"},
 			},
 			Run: runConfig,
+		},
+		{
+			Name:    "create-engram",
+			Summary: "a new engram from the content template",
+			Flags: []Flag{
+				requiredBrainFlag,
+				{Name: "title", Value: "title", Summary: "the title; the filename is its slug, after the prefix"},
+				{Name: "body", Value: "text", Summary: "text put where %body% is; - reads it from stdin"},
+			},
+			Run: runCreateEngram,
 		},
 		{
 			Name:    "version",

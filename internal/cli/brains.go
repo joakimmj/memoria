@@ -1,6 +1,9 @@
 package cli
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/joakimmj/memoria/internal/brain"
 	"github.com/joakimmj/memoria/internal/config"
 )
@@ -17,6 +20,28 @@ func loadRegistry() (*brain.Registry, error) {
 		return nil, err
 	}
 	return brain.Load(paths.Registry)
+}
+
+func openBrain(name string) (brain.Brain, error) {
+	r, err := loadRegistry()
+	if err != nil {
+		return brain.Brain{}, err
+	}
+	return r.Get(name)
+}
+
+func noBrainError(command string) error {
+	var names []string
+	if r, err := loadRegistry(); err == nil {
+		for _, b := range r.List() {
+			names = append(names, b.Name)
+		}
+	}
+	registered := "none registered"
+	if len(names) > 0 {
+		registered = "registered: " + strings.Join(names, ", ")
+	}
+	return &Error{Code: codeBrain, Err: fmt.Errorf("%s: --brain is required (%s)", command, registered)}
 }
 
 func runBrains(Invocation) (any, error) {
