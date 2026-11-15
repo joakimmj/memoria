@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/joakimmj/memoria/internal/brain"
@@ -15,25 +16,33 @@ func TestCreate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	withPrefix := func(prefix string) config.Engrams {
-		e := defaults.Engrams
-		e.Filename.Prefix = prefix
-		return e
+	withPrefix := func(prefix string) config.Config {
+		c := defaults
+		c.Engrams.Filename.Prefix = prefix
+		return c
 	}
+	noSynapses := defaults
+	noSynapses.Synapses = nil
+	hiddenSynapses := defaults
+	hiddenSynapses.Synapses = map[string]config.Synapse{"next": {List: true}}
+	const header = "<!-- SYNAPSES -->\n- **down:**\n- **up:**\n***\n<!-- /SYNAPSES -->\n\n"
 	tests := []struct {
 		name     string
-		cfg      config.Engrams
+		cfg      config.Config
 		opts     Options
 		wantFile string
 		want     string
+		wantBody Position
 		wantErr  error
 	}{
-		{name: "date prefix", cfg: defaults.Engrams, opts: Options{Title: "Project X"}, wantFile: "2026-08-01_project_x.md", want: "# Project X\n\n"},
-		{name: "date alone without a title", cfg: defaults.Engrams, wantFile: "2026-08-01.md", want: "# \n\n"},
-		{name: "title trimmed", cfg: withPrefix("none"), opts: Options{Title: "  Project X  "}, wantFile: "project_x.md", want: "# Project X\n\n"},
-		{name: "body", cfg: withPrefix("none"), opts: Options{Title: "x", Body: "hello\n"}, wantFile: "x.md", want: "# x\n\nhello\n"},
+		{name: "date prefix", cfg: defaults, opts: Options{Title: "Project X"}, wantFile: "2026-08-01_project_x.md", want: header + "# Project X\n\n", wantBody: Position{Line: 9}},
+		{name: "date alone without a title", cfg: defaults, wantFile: "2026-08-01.md", want: header + "# \n\n", wantBody: Position{Line: 9}},
+		{name: "title trimmed", cfg: withPrefix("none"), opts: Options{Title: "  Project X  "}, wantFile: "project_x.md", want: header + "# Project X\n\n", wantBody: Position{Line: 9}},
+		{name: "body", cfg: withPrefix("none"), opts: Options{Title: "x", Body: "hello\n"}, wantFile: "x.md", want: header + "# x\n\nhello\n", wantBody: Position{Line: 9}},
+		{name: "no synapse fields, no header", cfg: noSynapses, opts: Options{Title: "x"}, wantFile: "2026-08-01_x.md", want: "# x\n\n", wantBody: Position{Line: 3}},
+		{name: "no field to show, no header", cfg: hiddenSynapses, opts: Options{Title: "x"}, wantFile: "2026-08-01_x.md", want: "# x\n\n", wantBody: Position{Line: 3}},
 		{name: "none needs a title", cfg: withPrefix("none"), wantErr: ErrNoTitle},
-		{name: "empty slug", cfg: defaults.Engrams, opts: Options{Title: "???"}, wantErr: ErrEmptySlug},
+		{name: "empty slug", cfg: defaults, opts: Options{Title: "???"}, wantErr: ErrEmptySlug},
 		{name: "concept prefix not yet", cfg: withPrefix("concept"), opts: Options{Title: "x"}, wantErr: ErrPrefix},
 		{name: "unknown prefix", cfg: withPrefix("weekly"), opts: Options{Title: "x"}, wantErr: ErrPrefix},
 	}
@@ -54,7 +63,7 @@ func TestCreate(t *testing.T) {
 				t.Fatal(err)
 			}
 			path := filepath.Join(b.Location, tt.wantFile)
-			if got.Path != path || got.Brain != "work" || !got.Created {
+			if got.Path != path || got.Brain != "work" || !got.Created || got.Body != tt.wantBody {
 				t.Errorf("Create = %+v, want path %s", got, path)
 			}
 			content, err := os.ReadFile(path)
@@ -74,15 +83,15 @@ func TestCreateCollision(t *testing.T) {
 		t.Fatal(err)
 	}
 	b := brain.Brain{Name: "work", Location: t.TempDir()}
-	first, err := Create(b, defaults.Engrams, Options{Title: "x", Body: "first"}, testNow)
+	first, err := Create(b, defaults, Options{Title: "x", Body: "first"}, testNow)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Create(b, defaults.Engrams, Options{Title: "X", Body: "second"}, testNow); !errors.Is(err, ErrCollision) {
+	if _, err := Create(b, defaults, Options{Title: "X", Body: "second"}, testNow); !errors.Is(err, ErrCollision) {
 		t.Fatalf("err = %v, want ErrCollision", err)
 	}
 	content, _ := os.ReadFile(first.Path)
-	if string(content) != "# x\n\nfirst" {
+	if !strings.HasSuffix(string(content), "# x\n\nfirst") {
 		t.Errorf("collision changed the file: %q", content)
 	}
 }

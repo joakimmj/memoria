@@ -1,6 +1,7 @@
 package config
 
 import (
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -74,7 +75,53 @@ func TestLoad(t *testing.T) {
 		{name: "invalid JSON names the file", user: `{"engrams": `, wantErr: "config.json"},
 		{name: "trailing data", user: `{} {}`, wantErr: "config.json"},
 		{name: "unknown key names file and key", brain: `{"engrams": {"date_fromat": "x"}}`, wantErr: `.mia_dna.json: json: unknown field "date_fromat"`},
-		{name: "key of a later feature is unknown", brain: `{"synapses": {"up": null}}`, wantErr: `unknown field "synapses"`},
+		{name: "key of a later feature is unknown", brain: `{"frontmatter": {}}`, wantErr: `unknown field "frontmatter"`},
+		{
+			name: "null entry is removed, not restored",
+			user: `{"synapses": {"up": null}}`,
+			check: func(t *testing.T, c Config) {
+				if _, ok := c.Synapses["up"]; ok || len(c.Synapses) != 1 {
+					t.Errorf("synapses = %+v, want down alone", c.Synapses)
+				}
+			},
+		},
+		{
+			name:  "brain tier adds a removed entry back",
+			user:  `{"synapses": {"up": null}}`,
+			brain: `{"synapses": {"up": {"inverse": "down"}}}`,
+			check: func(t *testing.T, c Config) {
+				if got, want := c.Synapses["up"], (Synapse{Inverse: "down", List: true, ShowEmpty: true}); got != want {
+					t.Errorf("up = %+v, want %+v", got, want)
+				}
+			},
+		},
+		{
+			name:  "null inside an entry restores the default",
+			user:  `{"synapses": {"down": {"inverse": "parent"}}}`,
+			brain: `{"synapses": {"down": {"inverse": null}}}`,
+			check: func(t *testing.T, c Config) {
+				if got := c.Synapses["down"].Inverse; got != "up" {
+					t.Errorf("down.inverse = %q, want up", got)
+				}
+			},
+		},
+		{
+			name: "new entry: list and show_empty default to true",
+			user: `{"synapses": {"related": {}, "next": {"list": false, "show_empty": false}}}`,
+			check: func(t *testing.T, c Config) {
+				want := map[string]Synapse{
+					"down":    {Inverse: "up", List: true, ShowEmpty: true},
+					"up":      {Inverse: "down", List: true, ShowEmpty: true},
+					"related": {List: true, ShowEmpty: true},
+					"next":    {},
+				}
+				if !maps.Equal(c.Synapses, want) {
+					t.Errorf("synapses = %+v, want %+v", c.Synapses, want)
+				}
+			},
+		},
+		{name: "unknown key in an entry", user: `{"synapses": {"up": {"inverse": "down", "lsit": true}}}`, wantErr: `config.json: json: unknown field "lsit"`},
+		{name: "bad label names the file", brain: `{"synapses": {"see also": {}}}`, wantErr: `.mia_dna.json: synapse label "see also"`},
 		{name: "wrong type", user: `{"engrams": {"date_format": 3}}`, wantErr: "config.json"},
 		{name: "not an object", user: `[]`, wantErr: "config.json"},
 	}
@@ -130,6 +177,13 @@ func TestDefaults(t *testing.T) {
 	}
 	if c.Engrams != want {
 		t.Errorf("Defaults().Engrams = %+v, want %+v", c.Engrams, want)
+	}
+	synapses := map[string]Synapse{
+		"down": {Inverse: "up", List: true, ShowEmpty: true},
+		"up":   {Inverse: "down", List: true, ShowEmpty: true},
+	}
+	if !maps.Equal(c.Synapses, synapses) {
+		t.Errorf("Defaults().Synapses = %+v, want %+v", c.Synapses, synapses)
 	}
 }
 

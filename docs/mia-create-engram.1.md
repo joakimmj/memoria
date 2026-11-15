@@ -23,10 +23,25 @@ The file holds `engrams.content_template` with its placeholders expanded:
 `%body%` marks where `--body` goes. Without `%body%`, the body goes at the
 end. `--body -` reads the body from stdin.
 
+Above it, a header: the `SYNAPSES` block, one empty line per synapse field of
+mia-config(5), then a blank line. With no field to show there is no header.
+With the defaults:
+
+```
+<!-- SYNAPSES -->
+- **down:**
+- **up:**
+***
+<!-- /SYNAPSES -->
+
+# Project X
+
+```
+
 ## OUTPUT
 
 ```
-{ "ok": true, "result": { "brain": "work", "path": "/home/me/notes/work/2026-08-01_project_x.md", "body": { "line": 3, "col": 0 }, "created": true } }
+{ "ok": true, "result": { "brain": "work", "path": "/home/me/notes/work/2026-08-01_project_x.md", "body": { "line": 9, "col": 0 }, "created": true } }
 ```
 
 `body` is where the body starts: `line` counts from 1, `col` counts bytes from

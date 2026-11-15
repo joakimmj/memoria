@@ -16,10 +16,11 @@ func TestRunCreateEngram(t *testing.T) {
 	if _, stderr, status := run(t, "register-brain", work); status != exitOK {
 		t.Fatalf("register-brain: %s", stderr)
 	}
-	if err := os.WriteFile(filepath.Join(work, ".mia_dna.json"), []byte(`{"engrams": {"filename": {"prefix": "none"}}}`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(work, ".mia_dna.json"), []byte(`{"engrams": {"filename": {"prefix": "none"}}, "synapses": {"up": null}}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
+	const header = "<!-- SYNAPSES -->\n- **down:**\n***\n<!-- /SYNAPSES -->\n\n"
 	steps := []struct {
 		name     string
 		args     []string
@@ -30,9 +31,9 @@ func TestRunCreateEngram(t *testing.T) {
 	}{
 		{name: "no brain", args: []string{"create-engram", "--title", "x"}, wantCode: codeBrain},
 		{name: "unknown brain", args: []string{"create-engram", "--brain", "nope", "--title", "x"}, wantCode: codeNotFound},
-		{name: "create", args: []string{"create-engram", "--brain", "work", "--title", "Project X"}, wantFile: "project_x.md", want: "# Project X\n\n"},
+		{name: "create", args: []string{"create-engram", "--brain", "work", "--title", "Project X"}, wantFile: "project_x.md", want: header + "# Project X\n\n"},
 		{name: "collision", args: []string{"create-engram", "--brain", "work", "--title", "project x"}, wantCode: codeCollision},
-		{name: "body from stdin", args: []string{"create-engram", "--brain", "work", "--title", "piped", "--body", "-"}, stdin: "hello\n", wantFile: "piped.md", want: "# piped\n\nhello\n"},
+		{name: "body from stdin", args: []string{"create-engram", "--brain", "work", "--title", "piped", "--body", "-"}, stdin: "hello\n", wantFile: "piped.md", want: header + "# piped\n\nhello\n"},
 		{name: "no title", args: []string{"create-engram", "--brain", "work"}, wantCode: codeUsage},
 		{name: "empty slug", args: []string{"create-engram", "--brain", "work", "--title", "???"}, wantCode: codeEmptySlug},
 	}

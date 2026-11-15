@@ -7,11 +7,13 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/joakimmj/memoria/internal/brain"
 	"github.com/joakimmj/memoria/internal/config"
+	"github.com/joakimmj/memoria/internal/markdown"
 )
 
 // Errors a caller can act on; wrapped with the brain's name.
@@ -44,16 +46,18 @@ type Created struct {
 }
 
 // Create writes a new engram into b. now is the creation time.
-func Create(b brain.Brain, cfg config.Engrams, opts Options, now time.Time) (Created, error) {
+func Create(b brain.Brain, cfg config.Config, opts Options, now time.Time) (Created, error) {
 	title := strings.TrimSpace(opts.Title)
-	name, err := filename(cfg.Filename, title, now)
+	name, err := filename(cfg.Engrams.Filename, title, now)
 	if err != nil {
 		return Created{}, fmt.Errorf("(%s) %w", b.Name, err)
 	}
-	content, pos, err := render(cfg.ContentTemplate, vars{title: title, date: formatDate(now, cfg.DateFormat)}, opts.Body)
+	date := formatDate(now, cfg.Engrams.DateFormat)
+	prose, pos, err := render(cfg.Engrams.ContentTemplate, vars{title: title, date: date}, opts.Body)
 	if err != nil {
 		return Created{}, fmt.Errorf("(%s) %w", b.Name, err)
 	}
+	content, pos := withHeader(prose, pos, formatBlock(cfg.Synapses, nil))
 	path := filepath.Join(b.Location, name)
 	if err := writeNew(path, content); err != nil {
 		if errors.Is(err, fs.ErrExist) {
@@ -62,6 +66,16 @@ func Create(b brain.Brain, cfg config.Engrams, opts Options, now time.Time) (Cre
 		return Created{}, fmt.Errorf("(%s) %w", b.Name, err)
 	}
 	return Created{Brain: b.Name, Path: path, Body: pos, Created: true}, nil
+}
+
+func withHeader(prose string, pos Position, block []string) (string, Position) {
+	if block == nil {
+		return prose, pos
+	}
+	lines := slices.Concat([]string{""}, markdown.Lines(prose))
+	headed := markdown.SetSection(lines, synapsesSection, block, 0)
+	added := len(headed) - len(lines) + 1
+	return markdown.Join(headed), Position{Line: pos.Line + added, Col: pos.Col}
 }
 
 // O_EXCL fails when the file exists, with no gap between check and write.

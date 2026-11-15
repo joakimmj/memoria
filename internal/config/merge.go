@@ -1,5 +1,32 @@
 package config
 
+import "maps"
+
+// entryMaps hold named entries. A null entry removes it for good: it is the
+// one way to drop a default field.
+var entryMaps = []string{"synapses"}
+
+// removeNullEntries returns merged without the entries tier sets to null,
+// which merge restored from the defaults. merged is not modified.
+func removeNullEntries(merged, tier map[string]any) map[string]any {
+	out := maps.Clone(merged)
+	for _, name := range entryMaps {
+		entries, ok := merged[name].(map[string]any)
+		if !ok {
+			continue
+		}
+		set, _ := tier[name].(map[string]any)
+		isNull := func(k string, _ any) bool {
+			v, in := set[k]
+			return in && v == nil
+		}
+		kept := maps.Clone(entries)
+		maps.DeleteFunc(kept, isNull)
+		out[name] = kept
+	}
+	return out
+}
+
 // merge lays tier over base: maps merge by key, anything else replaces. A null
 // takes the value from defaults (the built-in tree at the same level), or
 // removes the key. The result shares nothing with the inputs.

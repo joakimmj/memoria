@@ -130,3 +130,59 @@ func TestMergeDoesNotAlias(t *testing.T) {
 		t.Errorf("defaults were modified: %v", defaults)
 	}
 }
+
+func TestRemoveNullEntries(t *testing.T) {
+	tests := []struct {
+		name, merged, tier, want string
+	}{
+		{
+			name:   "null entry removed",
+			merged: `{"synapses": {"down": {"inverse": "up"}, "up": {"inverse": "down"}}}`,
+			tier:   `{"synapses": {"up": null}}`,
+			want:   `{"synapses": {"down": {"inverse": "up"}}}`,
+		},
+		{
+			name:   "null inside an entry is not an entry",
+			merged: `{"synapses": {"down": {"inverse": "up"}}}`,
+			tier:   `{"synapses": {"down": {"inverse": null}}}`,
+			want:   `{"synapses": {"down": {"inverse": "up"}}}`,
+		},
+		{
+			name:   "other maps untouched",
+			merged: `{"engrams": {"date_format": "YYYY-MM-DD"}}`,
+			tier:   `{"engrams": {"date_format": null}}`,
+			want:   `{"engrams": {"date_format": "YYYY-MM-DD"}}`,
+		},
+		{
+			name:   "tier without the entry map",
+			merged: `{"synapses": {"up": {}}}`,
+			tier:   `{}`,
+			want:   `{"synapses": {"up": {}}}`,
+		},
+		{
+			name:   "whole entry map null is a setting",
+			merged: `{"synapses": {"up": {}}}`,
+			tier:   `{"synapses": null}`,
+			want:   `{"synapses": {"up": {}}}`,
+		},
+		{
+			name:   "entry map not a map",
+			merged: `{"synapses": 3}`,
+			tier:   `{"synapses": {"up": null}}`,
+			want:   `{"synapses": 3}`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			merged := tree(t, tt.merged).(map[string]any)
+			got := removeNullEntries(merged, tree(t, tt.tier).(map[string]any))
+			if want := tree(t, tt.want); !reflect.DeepEqual(any(got), want) {
+				g, _ := json.Marshal(got)
+				t.Errorf("removeNullEntries = %s, want %s", g, tt.want)
+			}
+			if !reflect.DeepEqual(any(merged), tree(t, tt.merged)) {
+				t.Errorf("merged was modified: %v", merged)
+			}
+		})
+	}
+}

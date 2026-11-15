@@ -12,6 +12,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 )
 
 // DNAFile is the brain tier's filename, at the brain's root.
@@ -25,7 +26,8 @@ var defaultTree = mustParse(defaultsJSON)
 
 // Config is the merged configuration.
 type Config struct {
-	Engrams Engrams `json:"engrams"`
+	Engrams  Engrams            `json:"engrams"`
+	Synapses map[string]Synapse `json:"synapses"`
 }
 
 // Engrams shapes new engrams.
@@ -40,6 +42,27 @@ type Filename struct {
 	Prefix     string `json:"prefix"`
 	DateFormat string `json:"date_format"`
 }
+
+// Synapse is a synapse field, keyed by its label.
+type Synapse struct {
+	Inverse   string `json:"inverse"`
+	List      bool   `json:"list"`
+	ShowEmpty bool   `json:"show_empty"`
+}
+
+// UnmarshalJSON makes a left-out list or show_empty true.
+func (s *Synapse) UnmarshalJSON(data []byte) error {
+	// plain has no methods, so decoding into it does not recurse.
+	type plain Synapse
+	p := plain{List: true, ShowEmpty: true}
+	if err := strictUnmarshal(data, &p); err != nil {
+		return err
+	}
+	*s = Synapse(p)
+	return nil
+}
+
+var label = regexp.MustCompile(`^[A-Za-z0-9_]+$`)
 
 // Defaults returns the built-in defaults alone.
 func Defaults() (Config, error) {
@@ -58,14 +81,14 @@ func Load(brainDir string) (Config, error) {
 		files = append(files, filepath.Join(brainDir, DNAFile))
 	}
 
-	var tree any = defaultTree
+	tree := defaultTree
 	for _, f := range files {
 		tier, err := readTier(f)
 		if err != nil {
 			return Config{}, err
 		}
 		if tier != nil {
-			tree = merge(tree, tier, defaultTree)
+			tree = removeNullEntries(merge(tree, tier, defaultTree).(map[string]any), tier)
 		}
 	}
 
@@ -89,11 +112,24 @@ func readTier(path string) (map[string]any, error) {
 	if err := strictUnmarshal(data, &tree); err != nil {
 		return nil, fmt.Errorf("config: %s: %w", path, err)
 	}
-	// Typed check per file, so the error names it.
-	if err := strictUnmarshal(data, &Config{}); err != nil {
+	if err := check(data); err != nil {
 		return nil, fmt.Errorf("config: %s: %w", path, err)
 	}
 	return tree, nil
+}
+
+// check validates one tier on its own, so an error can name its file.
+func check(data []byte) error {
+	var c Config
+	if err := strictUnmarshal(data, &c); err != nil {
+		return err
+	}
+	for name := range c.Synapses {
+		if !label.MatchString(name) {
+			return fmt.Errorf("synapse label %q: only letters, digits and _", name)
+		}
+	}
+	return nil
 }
 
 // mustParse panics: broken embedded JSON is a build bug.

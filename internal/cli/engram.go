@@ -25,5 +25,5 @@ func runCreateEngram(inv Invocation) (any, error) {
 		}
 		body = string(data)
 	}
-	return engram.Create(b, cfg.Engrams, engram.Options{Title: inv.Flags["title"], Body: body}, time.Now())
+	return engram.Create(b, cfg, engram.Options{Title: inv.Flags["title"], Body: body}, time.Now())
 }

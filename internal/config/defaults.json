@@ -3,5 +3,9 @@
     "date_format": "YYYY-MM-DD",
     "filename": { "prefix": "date", "date_format": "YYYY-MM-DD" },
     "content_template": "# %title%\n\n%body%"
+  },
+  "synapses": {
+    "down": { "inverse": "up", "list": true, "show_empty": true },
+    "up": { "inverse": "down", "list": true, "show_empty": true }
   }
 }
