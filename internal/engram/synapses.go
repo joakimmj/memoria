@@ -10,10 +10,10 @@ import (
 	"github.com/joakimmj/memoria/internal/markdown"
 )
 
-const (
-	synapsesSection = "SYNAPSES"
-	blockEnd        = "***"
-)
+// Section is the fenced section holding an engram's synapses.
+const Section = "SYNAPSES"
+
+const blockEnd = "***"
 
 // formatBlock returns the SYNAPSES block body for values, which maps a field
 // to its target filenames; nil when there is no field to show.
@@ -78,8 +78,9 @@ func parseBlock(body []string) map[string][]string {
 	return values
 }
 
-func readSynapses(lines []string) map[string][]string {
-	body, _ := markdown.Section(lines, synapsesSection)
+// Synapses returns the targets of each field in an engram's SYNAPSES block.
+func Synapses(lines []string) map[string][]string {
+	body, _ := markdown.Section(lines, Section)
 	return parseBlock(body)
 }
 
@@ -89,12 +90,12 @@ func writeSynapses(lines []string, fields map[string]config.Synapse, values map[
 	if block == nil {
 		return lines
 	}
-	if _, ok := markdown.Section(lines, synapsesSection); ok {
-		return markdown.SetSection(lines, synapsesSection, block, 0)
+	if _, ok := markdown.Section(lines, Section); ok {
+		return markdown.SetSection(lines, Section, block, 0)
 	}
 	at := markdown.FrontmatterEnd(lines)
 	if at < len(lines) && lines[at] != "" {
 		lines = slices.Concat(lines[:at], []string{""}, lines[at:])
 	}
-	return markdown.SetSection(lines, synapsesSection, block, at)
+	return markdown.SetSection(lines, Section, block, at)
 }

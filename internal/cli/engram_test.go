@@ -37,6 +37,11 @@ func TestRunCreateEngram(t *testing.T) {
 		{name: "no title", args: []string{"create-engram", "--brain", "work"}, wantCode: codeUsage},
 		{name: "empty slug", args: []string{"create-engram", "--brain", "work", "--title", "???"}, wantCode: codeEmptySlug},
 	}
+	defer func() {
+		if _, err := os.Stat(filepath.Join(work, ".mia_atlas.json")); err != nil {
+			t.Errorf("atlas not refreshed: %v", err)
+		}
+	}()
 	for _, st := range steps {
 		var out, errOut bytes.Buffer
 		Run(st.args, strings.NewReader(st.stdin), &out, &errOut)
@@ -51,5 +56,26 @@ func TestRunCreateEngram(t *testing.T) {
 				t.Errorf("%s: %s = %q, %v; want %q", st.name, st.wantFile, got, err, st.want)
 			}
 		}
+	}
+}
+
+func TestCreateEngramAtlasFailureWarns(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(dir, "config"))
+	t.Setenv("XDG_DATA_HOME", filepath.Join(dir, "data"))
+	work := filepath.Join(dir, "work")
+	if _, stderr, status := run(t, "register-brain", work); status != exitOK {
+		t.Fatalf("register-brain: %s", stderr)
+	}
+	// A folder where the atlas goes makes writing it fail.
+	if err := os.MkdirAll(filepath.Join(work, ".mia_atlas.json", "x"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	stdout, stderr, status := run(t, "create-engram", "--brain", "work", "--title", "x")
+	if status != exitOK || decode(t, stdout)["ok"] != true {
+		t.Fatalf("status %d, stdout %s", status, stdout)
+	}
+	if !strings.Contains(stderr, "warning") {
+		t.Errorf("stderr = %q, want a warning", stderr)
 	}
 }

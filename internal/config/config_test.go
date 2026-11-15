@@ -4,6 +4,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -121,6 +122,19 @@ func TestLoad(t *testing.T) {
 			},
 		},
 		{name: "unknown key in an entry", user: `{"synapses": {"up": {"inverse": "down", "lsit": true}}}`, wantErr: `config.json: json: unknown field "lsit"`},
+		{
+			name: "task markers replace wholesale",
+			user: `{"engrams": {"task_markers": {"done": ["[x]"]}}}`,
+			check: func(t *testing.T, c Config) {
+				m := c.Engrams.TaskMarkers
+				if !reflect.DeepEqual(m.Done, []string{"[x]"}) || !reflect.DeepEqual(m.NotDone, []string{"[ ]"}) {
+					t.Errorf("task_markers = %+v", m)
+				}
+			},
+		},
+		{name: "marker not bracketed", user: `{"engrams": {"task_markers": {"done": ["x"]}}}`, wantErr: `config.json: task marker "x"`},
+		{name: "marker with a bracket inside", user: `{"engrams": {"task_markers": {"done": ["[[x]"]}}}`, wantErr: `task marker "[[x]"`},
+		{name: "marker in both states", brain: `{"engrams": {"task_markers": {"not_done": ["[x]"]}}}`, wantErr: `.mia_dna.json: task marker "[x]": in both`},
 		{name: "bad label names the file", brain: `{"synapses": {"see also": {}}}`, wantErr: `.mia_dna.json: synapse label "see also"`},
 		{name: "wrong type", user: `{"engrams": {"date_format": 3}}`, wantErr: "config.json"},
 		{name: "not an object", user: `[]`, wantErr: "config.json"},
@@ -174,8 +188,9 @@ func TestDefaults(t *testing.T) {
 		DateFormat:      "YYYY-MM-DD",
 		Filename:        Filename{Prefix: "date", DateFormat: "YYYY-MM-DD"},
 		ContentTemplate: "# %title%\n\n%body%",
+		TaskMarkers:     TaskMarkers{NotDone: []string{"[ ]"}, Done: []string{"[x]", "[X]"}},
 	}
-	if c.Engrams != want {
+	if !reflect.DeepEqual(c.Engrams, want) {
 		t.Errorf("Defaults().Engrams = %+v, want %+v", c.Engrams, want)
 	}
 	synapses := map[string]Synapse{

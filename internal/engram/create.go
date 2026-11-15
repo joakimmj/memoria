@@ -73,7 +73,7 @@ func withHeader(prose string, pos Position, block []string) (string, Position) {
 		return prose, pos
 	}
 	lines := slices.Concat([]string{""}, markdown.Lines(prose))
-	headed := markdown.SetSection(lines, synapsesSection, block, 0)
+	headed := markdown.SetSection(lines, Section, block, 0)
 	added := len(headed) - len(lines) + 1
 	return markdown.Join(headed), Position{Line: pos.Line + added, Col: pos.Col}
 }

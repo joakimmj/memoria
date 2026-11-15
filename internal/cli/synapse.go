@@ -18,5 +18,10 @@ func runAttachSynapse(inv Invocation) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return engram.Attach(cfg, source, inv.Args[1], target)
+	attached, err := engram.Attach(cfg, source, inv.Args[1], target)
+	if err != nil {
+		return nil, err
+	}
+	refreshAtlas(inv, source.Brain, cfg)
+	return attached, nil
 }

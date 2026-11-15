@@ -36,6 +36,7 @@ type Invocation struct {
 	Flags  map[string]string // flags given; booleans are "true"
 	Stdin  io.Reader
 	Stdout io.Writer // Text commands only
+	Stderr io.Writer // diagnostics
 }
 
 // table is filled in init: Run funcs read table, so an initializer would be

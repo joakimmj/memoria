@@ -54,6 +54,11 @@ func TestRunAttachSynapse(t *testing.T) {
 		"personal/p.md": "- **down:** [b](b.md)",
 		"personal/b.md": "- **up:** [p](p.md)",
 	}
+	for _, b := range []string{work, personal} {
+		if _, err := os.Stat(filepath.Join(b, ".mia_atlas.json")); err != nil {
+			t.Errorf("atlas not refreshed: %v", err)
+		}
+	}
 	for f, item := range want {
 		content, err := os.ReadFile(filepath.Join(dir, f))
 		if err != nil || !strings.Contains(string(content), item) {

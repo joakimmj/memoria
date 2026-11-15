@@ -115,7 +115,7 @@ func (s *session) load(file string) (*doc, error) {
 		return nil, fmt.Errorf("(%s) %w", s.brain.Name, err)
 	}
 	lines := markdown.Lines(string(data))
-	d := &doc{lines: lines, synapses: readSynapses(lines)}
+	d := &doc{lines: lines, synapses: Synapses(lines)}
 	s.docs[file] = d
 	return d, nil
 }

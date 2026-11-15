@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 )
 
 // DNAFile is the brain tier's filename, at the brain's root.
@@ -32,9 +33,27 @@ type Config struct {
 
 // Engrams shapes new engrams.
 type Engrams struct {
-	DateFormat      string   `json:"date_format"`
-	Filename        Filename `json:"filename"`
-	ContentTemplate string   `json:"content_template"`
+	DateFormat      string      `json:"date_format"`
+	Filename        Filename    `json:"filename"`
+	ContentTemplate string      `json:"content_template"`
+	TaskMarkers     TaskMarkers `json:"task_markers"`
+}
+
+// TaskMarkers are the list markers that make a list item a task, by state.
+type TaskMarkers struct {
+	NotDone []string `json:"not_done"`
+	Done    []string `json:"done"`
+}
+
+// State returns the state marker is listed under, or "".
+func (m TaskMarkers) State(marker string) string {
+	switch {
+	case slices.Contains(m.NotDone, marker):
+		return "not_done"
+	case slices.Contains(m.Done, marker):
+		return "done"
+	}
+	return ""
 }
 
 // Filename shapes an engram's filename.
@@ -62,7 +81,10 @@ func (s *Synapse) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-var label = regexp.MustCompile(`^[A-Za-z0-9_]+$`)
+var (
+	label  = regexp.MustCompile(`^[A-Za-z0-9_]+$`)
+	marker = regexp.MustCompile(`^\[[^\[\]]*\]$`)
+)
 
 // Defaults returns the built-in defaults alone.
 func Defaults() (Config, error) {
@@ -87,8 +109,15 @@ func Load(brainDir string) (Config, error) {
 		if err != nil {
 			return Config{}, err
 		}
-		if tier != nil {
-			tree = removeNullEntries(merge(tree, tier, defaultTree).(map[string]any), tier)
+		if tier == nil {
+			continue
+		}
+		tree = removeNullEntries(merge(tree, tier, defaultTree).(map[string]any), tier)
+		// A conflict between tiers shows only once merged; blame the later one.
+		if c, err := decode(tree); err == nil {
+			if err := checkMerged(c); err != nil {
+				return Config{}, fmt.Errorf("config: %s: %w", f, err)
+			}
 		}
 	}
 
@@ -127,6 +156,22 @@ func check(data []byte) error {
 	for name := range c.Synapses {
 		if !label.MatchString(name) {
 			return fmt.Errorf("synapse label %q: only letters, digits and _", name)
+		}
+	}
+	m := c.Engrams.TaskMarkers
+	for _, mk := range slices.Concat(m.NotDone, m.Done) {
+		if !marker.MatchString(mk) {
+			return fmt.Errorf("task marker %q: one bracketed run, such as [x]", mk)
+		}
+	}
+	return checkMerged(c)
+}
+
+func checkMerged(c Config) error {
+	m := c.Engrams.TaskMarkers
+	for _, mk := range m.NotDone {
+		if slices.Contains(m.Done, mk) {
+			return fmt.Errorf("task marker %q: in both not_done and done", mk)
 		}
 	}
 	return nil

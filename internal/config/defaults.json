@@ -2,7 +2,8 @@
   "engrams": {
     "date_format": "YYYY-MM-DD",
     "filename": { "prefix": "date", "date_format": "YYYY-MM-DD" },
-    "content_template": "# %title%\n\n%body%"
+    "content_template": "# %title%\n\n%body%",
+    "task_markers": { "not_done": ["[ ]"], "done": ["[x]", "[X]"] }
   },
   "synapses": {
     "down": { "inverse": "up", "list": true, "show_empty": true },

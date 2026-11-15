@@ -6,7 +6,8 @@ func markers(name string) (open, close string) {
 	return "<!-- " + name + " -->", "<!-- /" + name + " -->"
 }
 
-func find(lines []string, name string) (open, close int, ok bool) {
+// SectionBounds returns the indexes of section name's marker lines.
+func SectionBounds(lines []string, name string) (open, close int, ok bool) {
 	openMarker, closeMarker := markers(name)
 	is := func(marker string) func(string) bool {
 		return func(line string) bool { return trimmed(line) == marker }
@@ -24,7 +25,7 @@ func find(lines []string, name string) (open, close int, ok bool) {
 
 // Section returns a copy of the body of section name.
 func Section(lines []string, name string) ([]string, bool) {
-	open, close, ok := find(lines, name)
+	open, close, ok := SectionBounds(lines, name)
 	if !ok {
 		return nil, false
 	}
@@ -34,7 +35,7 @@ func Section(lines []string, name string) ([]string, bool) {
 // SetSection returns lines with section name's body set to body. A missing
 // section is inserted before index at, or at the end when at is out of range.
 func SetSection(lines []string, name string, body []string, at int) []string {
-	if open, close, ok := find(lines, name); ok {
+	if open, close, ok := SectionBounds(lines, name); ok {
 		return slices.Concat(lines[:open+1], body, lines[close:])
 	}
 	if at < 0 || at >= len(lines) {

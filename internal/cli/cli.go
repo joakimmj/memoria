@@ -48,6 +48,7 @@ func Run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	}
 	inv.Stdin = stdin
 	inv.Stdout = stdout
+	inv.Stderr = stderr
 
 	result, err := cmd.Run(inv)
 	return finish(cmd, stdout, stderr, result, err)

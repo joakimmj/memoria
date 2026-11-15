@@ -25,5 +25,10 @@ func runCreateEngram(inv Invocation) (any, error) {
 		}
 		body = string(data)
 	}
-	return engram.Create(b, cfg, engram.Options{Title: inv.Flags["title"], Body: body}, time.Now())
+	created, err := engram.Create(b, cfg, engram.Options{Title: inv.Flags["title"], Body: body}, time.Now())
+	if err != nil {
+		return nil, err
+	}
+	refreshAtlas(inv, b, cfg)
+	return created, nil
 }

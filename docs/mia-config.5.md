@@ -44,6 +44,12 @@ The keys:
   `%title%` is the title as given, `%date%` today, and `%body%`
   marks where the body goes and is removed. Default `# %title%`, a blank
   line, then `%body%`.
+- `engrams.task_markers`: which list markers make a list item a task, as two
+  lists, `not_done` and `done`; a marker is one bracketed run, such as `[x]`,
+  and is listed under one state only. `- [ ] Call Alice` is a task not done.
+  Default `[ ]` not done, `[x]` and `[X]` done.
+- `engrams.task_markers.not_done`, `engrams.task_markers.done`: the markers
+  of each state. A list replaces the one below it wholesale.
 - `synapses.<name>`: a synapse field, a link from an engram to others,
   written as `<name>` in the engram's `SYNAPSES` block. A name is letters,
   digits and `_`. Default `down` and `up`, each the other's inverse.
