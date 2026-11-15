@@ -107,6 +107,24 @@ func init() {
 			Run: runTasks,
 		},
 		{
+			Name:    "check",
+			Summary: "rebuild each atlas and answer what is wrong, writing no engram",
+			Flags: []Flag{
+				brainsFlag,
+				{Name: "strict", Summary: "any problem fails, with the problems as the result"},
+			},
+			Run: runCheck,
+		},
+		{
+			Name:    "rebuild",
+			Summary: "rebuild the atlas, repairing what can be repaired first with --fix",
+			Flags: []Flag{
+				{Name: "brain", Value: "name", Summary: "the brain to rebuild", Required: true},
+				{Name: "fix", Summary: "write missing inverses and regenerate every SYNAPSES block first"},
+			},
+			Run: runRebuild,
+		},
+		{
 			Name:    "create-engram",
 			Summary: "a new engram from the content template",
 			Flags: []Flag{

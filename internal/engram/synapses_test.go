@@ -175,3 +175,15 @@ func TestBody(t *testing.T) {
 		})
 	}
 }
+
+func TestFieldLine(t *testing.T) {
+	lines := markdown.Lines("---\nup: x\n---\n<!-- SYNAPSES -->\n- **down:**\n- [ ] **up:** [a](a.md)\n***\n<!-- /SYNAPSES -->\n- **side:**\n")
+	for field, want := range map[string]int{"down": 4, "up": 5, "side": -1, "none": -1} {
+		if got := FieldLine(lines, field); got != want {
+			t.Errorf("FieldLine(%q) = %d, want %d", field, got, want)
+		}
+	}
+	if got := FieldLine(markdown.Lines("# no block\n"), "down"); got != -1 {
+		t.Errorf("no block: FieldLine = %d, want -1", got)
+	}
+}

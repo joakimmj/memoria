@@ -63,13 +63,22 @@ type stateTask struct {
 // Refresh brings b's atlas up to date with its files, writing it only when
 // something changed.
 func Refresh(b brain.Brain, cfg config.Config) (Atlas, error) {
+	return refresh(b, cfg, false)
+}
+
+// Rebuild parses every engram again, ignoring the stored atlas.
+func Rebuild(b brain.Brain, cfg config.Config) (Atlas, error) {
+	return refresh(b, cfg, true)
+}
+
+func refresh(b brain.Brain, cfg config.Config, full bool) (Atlas, error) {
 	files, err := engramFiles(b.Location)
 	if err != nil {
 		return Atlas{}, fmt.Errorf("(%s) atlas: %w", b.Name, err)
 	}
 	old, stored := read(b.Location)
 	fp := fingerprint(cfg)
-	stale := old.Config != fp
+	stale := full || old.Config != fp
 
 	atlas := Atlas{Config: fp, Engrams: map[string]Entry{}}
 	parsed := map[string][]stateTask{}

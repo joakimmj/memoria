@@ -117,3 +117,17 @@ func Body(lines []string) []string {
 	}
 	return slices.Clone(lines[start:])
 }
+
+// FieldLine returns the index of field's item in the SYNAPSES block, or -1.
+func FieldLine(lines []string, field string) int {
+	open, close, ok := markdown.SectionBounds(lines, Section)
+	if !ok {
+		return -1
+	}
+	for i := open + 1; i < close; i++ {
+		if m := fieldLine.FindStringSubmatch(strings.TrimSpace(lines[i])); m != nil && m[1] == field {
+			return i
+		}
+	}
+	return -1
+}

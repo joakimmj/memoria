@@ -20,6 +20,7 @@ const (
 	codeCrossBrain  = "cross_brain"
 	codeNotInBrain  = "not_in_brain"
 	codeNotAnEngram = "not_an_engram"
+	codeProblems    = "problems"
 )
 
 var sentinelCodes = []struct {
@@ -47,10 +48,12 @@ type coder interface {
 	ErrorCode() string
 }
 
-// Error is a failure with a code a caller can act on.
+// Error is a failure with a code a caller can act on, and a result when the
+// failure has one to show.
 type Error struct {
-	Code string
-	Err  error
+	Code   string
+	Err    error
+	Result any
 }
 
 // Error returns the message of the wrapped error.

@@ -56,6 +56,8 @@ stderr, so stdout is always one object.
 - `not_in_brain`: a path outside every brain, or outside the one `--brain`
   names.
 - `not_an_engram`: a path in a brain that is not a `.md` file directly in it.
+- `problems`: `check --strict` found something wrong; the problems are the
+  result.
 
 ## EXIT STATUS
 
@@ -64,4 +66,5 @@ stderr, so stdout is always one object.
 ## SEE ALSO
 
 mia-help(1), mia-commands(1), mia-brains(1), mia-engrams(1), mia-engram(1),
-mia-tasks(1), mia-attach-synapse(1), mia-config(5)
+mia-tasks(1), mia-check(1), mia-rebuild(1), mia-attach-synapse(1),
+mia-config(5)

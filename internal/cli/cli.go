@@ -71,6 +71,10 @@ func writeEnvelope(stdout, stderr io.Writer, result any, err error) int {
 	status := exitOK
 	if err != nil {
 		env = envelope{Error: err.Error(), Code: codeOf(err)}
+		var coded *Error
+		if errors.As(err, &coded) {
+			env.Result = coded.Result
+		}
 		status = exitFail
 	}
 	if encErr := json.NewEncoder(stdout).Encode(env); encErr != nil {
