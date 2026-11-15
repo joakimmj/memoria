@@ -39,6 +39,8 @@ var sentinelCodes = []struct {
 	{engram.ErrPrefix, codePrefix},
 	{engram.ErrTemplate, codeTemplate},
 	{engram.ErrNoTitle, codeUsage},
+	{engram.ErrNoField, codeNotFound},
+	{engram.ErrSelf, codeUsage},
 }
 
 type coder interface {

@@ -86,6 +86,17 @@ func init() {
 			Run: runCreateEngram,
 		},
 		{
+			Name:    "attach-synapse",
+			Summary: "link an engram to another through a synapse field, and back through its inverse",
+			Args: []Arg{
+				{Name: "source", Summary: "the engram the field is on: a name, or a path to it"},
+				{Name: "field", Summary: "a synapse field, such as down"},
+				{Name: "target", Summary: "the engram linked to: a name, or a path to it"},
+			},
+			Flags: []Flag{brainFlag},
+			Run:   runAttachSynapse,
+		},
+		{
 			Name:    "version",
 			Summary: "the version and commit mia was built from",
 			Run:     runVersion,

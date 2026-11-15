@@ -2,10 +2,12 @@ package engram
 
 import (
 	"maps"
+	"regexp"
 	"slices"
 	"strings"
 
 	"github.com/joakimmj/memoria/internal/config"
+	"github.com/joakimmj/memoria/internal/markdown"
 )
 
 const (
@@ -47,4 +49,52 @@ func fieldItem(label string, targets []string) string {
 
 func link(file string) string {
 	return "[" + strings.TrimSuffix(file, ".md") + "](" + file + ")"
+}
+
+// A marker such as "[ ]" before the label is allowed and dropped.
+var fieldLine = regexp.MustCompile(`^- (?:\[[^\]]*\]\s+)?\*\*([A-Za-z0-9_]+):\*\*(.*)$`)
+
+// parseBlock ignores lines that are not field items, and anything in an item
+// that is not a link to an engram.
+func parseBlock(body []string) map[string][]string {
+	values := map[string][]string{}
+	for _, line := range body {
+		m := fieldLine.FindStringSubmatch(strings.TrimSpace(line))
+		if m == nil {
+			continue
+		}
+		label, targets := m[1], values[m[1]]
+		if targets == nil {
+			targets = []string{}
+		}
+		for _, l := range markdown.Links(m[2]) {
+			file, ok := markdown.EngramTarget(l.Dest)
+			if ok && !slices.Contains(targets, file) {
+				targets = append(targets, file)
+			}
+		}
+		values[label] = targets
+	}
+	return values
+}
+
+func readSynapses(lines []string) map[string][]string {
+	body, _ := markdown.Section(lines, synapsesSection)
+	return parseBlock(body)
+}
+
+// writeSynapses regenerates the block, under the frontmatter when new.
+func writeSynapses(lines []string, fields map[string]config.Synapse, values map[string][]string) []string {
+	block := formatBlock(fields, values)
+	if block == nil {
+		return lines
+	}
+	if _, ok := markdown.Section(lines, synapsesSection); ok {
+		return markdown.SetSection(lines, synapsesSection, block, 0)
+	}
+	at := markdown.FrontmatterEnd(lines)
+	if at < len(lines) && lines[at] != "" {
+		lines = slices.Concat(lines[:at], []string{""}, lines[at:])
+	}
+	return markdown.SetSection(lines, synapsesSection, block, at)
 }
