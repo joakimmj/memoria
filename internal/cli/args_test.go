@@ -124,3 +124,30 @@ func TestParse(t *testing.T) {
 		})
 	}
 }
+
+func TestParseRepeatable(t *testing.T) {
+	cmd := Command{Name: "demo", Flags: []Flag{{Name: "brain", Value: "name", Repeatable: true}, {Name: "state", Value: "s"}}}
+	tests := []struct {
+		name string
+		argv []string
+		want map[string][]string
+	}{
+		{name: "none", argv: []string{"--state", "done"}, want: map[string][]string{}},
+		{name: "one", argv: []string{"--brain", "a"}, want: map[string][]string{"brain": {"a"}}},
+		{name: "several, in order, interleaved", argv: []string{"--brain", "b", "--state", "done", "--brain=a"}, want: map[string][]string{"brain": {"b", "a"}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			inv, err := parse(cmd, tt.argv)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !maps.EqualFunc(inv.Repeated, tt.want, slices.Equal) {
+				t.Errorf("Repeated = %v, want %v", inv.Repeated, tt.want)
+			}
+			if _, ok := inv.Flags["brain"]; ok {
+				t.Errorf("repeatable flag also in Flags: %v", inv.Flags)
+			}
+		})
+	}
+}

@@ -162,7 +162,7 @@ func tasks(old Tasks, engrams map[string]Entry, parsed map[string][]stateTask) T
 	out := Tasks{NotDone: keep(old.NotDone), Done: keep(old.Done)}
 	for _, ts := range parsed {
 		for _, t := range ts {
-			if t.state == "done" {
+			if t.state == config.Done {
 				out.Done = append(out.Done, t.Task)
 			} else {
 				out.NotDone = append(out.NotDone, t.Task)

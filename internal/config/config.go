@@ -45,13 +45,19 @@ type TaskMarkers struct {
 	Done    []string `json:"done"`
 }
 
+// Task states.
+const (
+	NotDone = "not_done"
+	Done    = "done"
+)
+
 // State returns the state marker is listed under, or "".
 func (m TaskMarkers) State(marker string) string {
 	switch {
 	case slices.Contains(m.NotDone, marker):
-		return "not_done"
+		return NotDone
 	case slices.Contains(m.Done, marker):
-		return "done"
+		return Done
 	}
 	return ""
 }

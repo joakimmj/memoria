@@ -3,7 +3,23 @@ package cli
 import (
 	"flag"
 	"io"
+	"strings"
 )
+
+// list collects every value of a repeatable flag.
+type list struct{ values *[]string }
+
+func (l list) String() string {
+	if l.values == nil {
+		return ""
+	}
+	return strings.Join(*l.values, ",")
+}
+
+func (l list) Set(v string) error {
+	*l.values = append(*l.values, v)
+	return nil
+}
 
 // parse lets flags and positionals interleave; `--` ends flags. -h/--help →
 // error wrapping flag.ErrHelp.
@@ -11,10 +27,15 @@ func parse(cmd Command, argv []string) (Invocation, error) {
 	fs := flag.NewFlagSet(cmd.Name, flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
+	lists := map[string]*[]string{}
 	for _, f := range cmd.Flags {
-		if f.Value == "" {
+		switch {
+		case f.Repeatable:
+			lists[f.Name] = new([]string)
+			fs.Var(list{lists[f.Name]}, f.Name, f.Summary)
+		case f.Value == "":
 			fs.Bool(f.Name, false, f.Summary)
-		} else {
+		default:
 			fs.String(f.Name, "", f.Summary)
 		}
 	}
@@ -44,14 +65,19 @@ func parse(cmd Command, argv []string) (Invocation, error) {
 
 	// Visit skips flags not given.
 	flags := map[string]string{}
+	repeated := map[string][]string{}
 	fs.Visit(func(f *flag.Flag) {
+		if values, ok := lists[f.Name]; ok {
+			repeated[f.Name] = *values
+			return
+		}
 		flags[f.Name] = f.Value.String()
 	})
 
 	if err := checkCounts(cmd, pos, flags); err != nil {
 		return Invocation{}, err
 	}
-	return Invocation{Args: pos, Flags: flags}, nil
+	return Invocation{Args: pos, Flags: flags, Repeated: repeated}, nil
 }
 
 func checkCounts(cmd Command, pos []string, flags map[string]string) error {

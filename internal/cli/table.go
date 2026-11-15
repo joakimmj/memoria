@@ -24,19 +24,21 @@ type Arg struct {
 
 // Flag is a --name flag; boolean when Value is empty.
 type Flag struct {
-	Name     string `json:"name"`
-	Value    string `json:"value,omitempty"`
-	Summary  string `json:"summary"`
-	Required bool   `json:"required,omitempty"`
+	Name       string `json:"name"`
+	Value      string `json:"value,omitempty"`
+	Summary    string `json:"summary"`
+	Required   bool   `json:"required,omitempty"`
+	Repeatable bool   `json:"repeatable,omitempty"`
 }
 
 // Invocation is one parsed command line.
 type Invocation struct {
-	Args   []string          // positionals given
-	Flags  map[string]string // flags given; booleans are "true"
-	Stdin  io.Reader
-	Stdout io.Writer // Text commands only
-	Stderr io.Writer // diagnostics
+	Args     []string            // positionals given
+	Flags    map[string]string   // flags given; booleans are "true"
+	Repeated map[string][]string // repeatable flags given, in order
+	Stdin    io.Reader
+	Stdout   io.Writer // Text commands only
+	Stderr   io.Writer // diagnostics
 }
 
 // table is filled in init: Run funcs read table, so an initializer would be
@@ -44,6 +46,8 @@ type Invocation struct {
 var table []Command
 
 var brainFlag = Flag{Name: "brain", Value: "name", Summary: "a registered brain"}
+
+var brainsFlag = Flag{Name: "brain", Value: "name", Summary: "a registered brain; repeat for several, every brain when omitted", Repeatable: true}
 
 var requiredBrainFlag = Flag{Name: "brain", Value: "name", Summary: "the brain to write in", Required: true}
 
@@ -75,6 +79,32 @@ func init() {
 				{Name: "defaults", Summary: "only the built-in defaults, to copy keys worth changing from"},
 			},
 			Run: runConfig,
+		},
+		{
+			Name:    "engrams",
+			Summary: "every engram, newest first",
+			Flags:   []Flag{brainsFlag},
+			Run:     runEngrams,
+		},
+		{
+			Name:    "engram",
+			Summary: "one engram: its atlas entry, backlinks, content and date formats",
+			Args:    []Arg{{Name: "engram", Summary: "a name, or a path to it"}},
+			Flags: []Flag{
+				brainFlag,
+				{Name: "body", Summary: "the content without the frontmatter and the SYNAPSES block"},
+			},
+			Run: runEngram,
+		},
+		{
+			Name:    "tasks",
+			Summary: "every task, filtered by state or engram",
+			Flags: []Flag{
+				brainsFlag,
+				{Name: "state", Value: "state", Summary: "not_done or done"},
+				{Name: "engram", Value: "engram", Summary: "only this engram's tasks; it decides the brain"},
+			},
+			Run: runTasks,
 		},
 		{
 			Name:    "create-engram",
@@ -155,6 +185,9 @@ func (f Flag) usage(bracket bool) string {
 	}
 	if bracket {
 		s = "[" + s + "]"
+	}
+	if f.Repeatable {
+		s += "..."
 	}
 	return s
 }

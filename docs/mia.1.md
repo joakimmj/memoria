@@ -63,5 +63,5 @@ stderr, so stdout is always one object.
 
 ## SEE ALSO
 
-mia-help(1), mia-commands(1), mia-brains(1), mia-attach-synapse(1),
-mia-config(5)
+mia-help(1), mia-commands(1), mia-brains(1), mia-engrams(1), mia-engram(1),
+mia-tasks(1), mia-attach-synapse(1), mia-config(5)

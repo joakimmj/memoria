@@ -99,3 +99,21 @@ func writeSynapses(lines []string, fields map[string]config.Synapse, values map[
 	}
 	return markdown.SetSection(lines, Section, block, at)
 }
+
+// Body returns lines without the frontmatter, the SYNAPSES block and the
+// blank line that follows a header.
+func Body(lines []string) []string {
+	start := markdown.FrontmatterEnd(lines)
+	rest := lines[start:]
+	if open, close, ok := markdown.SectionBounds(rest, Section); ok {
+		if open == 0 {
+			start += close + 1
+		} else {
+			return slices.Concat(rest[:open], rest[close+1:])
+		}
+	}
+	if start > 0 && start < len(lines) && lines[start] == "" {
+		start++
+	}
+	return slices.Clone(lines[start:])
+}

@@ -154,3 +154,24 @@ func TestWriteSynapses(t *testing.T) {
 		})
 	}
 }
+
+func TestBody(t *testing.T) {
+	const block = "<!-- SYNAPSES -->\n- **up:**\n***\n<!-- /SYNAPSES -->\n"
+	tests := []struct{ name, content, want string }{
+		{name: "no header", content: "# A\ntext\n", want: "# A\ntext\n"},
+		{name: "block", content: block + "\n# A\n", want: "# A\n"},
+		{name: "frontmatter and block", content: "---\nk: v\n---\n" + block + "\n# A\n", want: "# A\n"},
+		{name: "frontmatter alone", content: "---\nk: v\n---\n# A\n", want: "# A\n"},
+		{name: "only one blank line dropped", content: block + "\n\n# A\n", want: "\n# A\n"},
+		{name: "block further down", content: "# A\n" + block + "text\n", want: "# A\ntext\n"},
+		{name: "header alone", content: block, want: ""},
+		{name: "empty", content: "", want: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := markdown.Join(Body(markdown.Lines(tt.content))); got != tt.want {
+				t.Errorf("Body = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
